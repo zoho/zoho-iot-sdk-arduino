@@ -1,0 +1,9 @@
+#IDE configurations
+.vscode
+.idea
+#build & tmp folders
+build
+remake.sh
+#downloaded project dependencies
+.DS_Store
+zoho_sdk.log
