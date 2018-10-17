@@ -3,67 +3,45 @@
 // #include "Client.h"
 // #include "Stream.h"
 
-ZohoIOTClient::ZohoIOTClient()
-{
-
-    _mqtt_client = new PubSubClient(_wifi_client);
-}
-
-void ZohoIOTClient::setWifiParams(char *ssid, char *password)
+void ZohoIOTClient::init(char *device_id, char *device_token)
 {
     //TODO: Empty validation
-    _wifi_ssid = ssid;
-    _wifi_password = password;
-}
-
-void ZohoIOTClient::setHUBConnectionParams(char *device_id, char *device_token)
-{
-    //TODO: Empty validation
+    //TODO: unsubscribe old subscriptions.
     _device_id = device_id;
     _device_token = device_token;
+    _mqtt_client.setServer(_mqtt_server, _port);
 }
 
-void ZohoIOTClient::connect_WIFI()
+bool ZohoIOTClient::connect()
 {
-    delay(10);
-    Serial.print("\n\n\n Connecting to ");
-    Serial.println(_wifi_ssid);
-    // WiFi.mode(WIFI_STA);
-    WiFi.begin(_wifi_ssid, _wifi_password);
+    //TODO: Empty validation
+    //TODO: resubscribe old subscriptions if reconnecting.
 
-    while (WiFi.status() != WL_CONNECTED)
+    if (_mqtt_client.connected())
     {
-        delay(1000);
-        Serial.print(".");
+        //Already having an active connecting with HUB... No job to do here..
+        return true;
     }
 
-    Serial.print("\nSuccessfully connected to ");
-    Serial.println(_wifi_ssid);
-    Serial.print("\nwith IP: ");
-    Serial.println(WiFi.localIP());
-}
+    Serial.println("Initiating connection with HUB...!");
 
-void ZohoIOTClient::connect_IOT_HUB()
-{
-    //TODO: move this to constructor.
-    (this->_mqtt_client)->setServer(_mqtt_server, _port);
-
-    while (!(this->_mqtt_client)->connected())
+    while (!_mqtt_client.connected())
     {
-        Serial.println("Connecting to IOT HUB..");
+        Serial.println("Connecting..");
 
-        if ((this->_mqtt_client)->connect(_device_id, _device_id, _device_token))
+        if (_mqtt_client.connect(_device_id, _device_id, _device_token))
         {
             Serial.println("Successfully Connected!");
 
-            (this->_mqtt_client)->publish("hello", "Connected!");
+            return _mqtt_client.publish("hello", "Connected!");
         }
         else
         {
             Serial.print("Failed. rc:");
-            Serial.print((this->_mqtt_client)->state());
+            Serial.print(_mqtt_client.state());
             Serial.println(" Retry in 5 seconds");
             delay(5000);
         }
     }
+    return true;
 }
