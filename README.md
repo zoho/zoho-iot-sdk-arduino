@@ -8,7 +8,7 @@ This Zoho IoT SDK for Arduino will provide support for the famous IOT devices li
 
 ### Connectivity
 
-This SDK will help your device establish a reliable MQTT connection with the server as minimal as much as possible in order to deliver telemetry data from the device and to receive commands from the cloud.
+This SDK will help your device to establish a reliable MQTT connection with the server as minimal as much as possible in order to deliver telemetry data from the device and to receive commands from the cloud.
 
 ### Data Collection
 
@@ -16,13 +16,13 @@ This SDK has inbuilt support for JSON data format. It will allow you to effortle
 
 ### Device Compatibility
 
-This SDK will ack as a library for Arduino Development Environment. The list of targetted devices are:
+This SDK will act as a library for Arduino Development Environment. The list of targeted devices are:
 
 - ESP 8266
 - ESP 32
 - Arduino devices (with Ethernet Shield / ESP01 module)
 
-As a library to Arduino development platform, it can support all the devices (with networking options) that are supported by Arduino IDE.
+> As a library to Arduino development platform, it can support all the devices (with networking options) that are supported by Arduino IDE.
 
 ## Setup Instructions
 
@@ -43,6 +43,6 @@ Follow the below steps to import this SDK as Library in Arduino:
 - In Arduino IDE, choose `Sketch` -> `Import Library` -> `Add Library`
 - From the downloaded location, choose the folder `zoho-iot-sdk`.
 
-### Tying out the Examples\*\*
+### Tying out the Examples
 
 This SDK has some default examples to try some basic operations. Please find it examples folder and follows its appropriate readme instructions.
