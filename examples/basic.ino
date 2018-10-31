@@ -5,8 +5,8 @@
 #define ssid "Zoho-Guest"
 #define password ""
 
-#define DEVICE_ID "dev13mar_2"
-#define DEVICE_TOKEN "secret"
+#define DEVICE_ID (char *)"dev13mar_2"
+#define DEVICE_TOKEN (char *)"secret"
 
 WiFiClient espClient;
 ZohoIOTClient zc(espClient);
@@ -51,6 +51,20 @@ void setup()
     zc.connect();
 
     Serial.println("Ready!");
+
+    //Test data points
+    int ii = 10;
+    float ff = 10.5;
+    double dd = 10.3;
+    const char *cc = "asdf";
+    string s = "asdfasdf";
+
+    zc.addDataPointNumber("number", 10);
+    zc.addDataPointNumber("int", ii);
+    zc.addDataPointNumber("float", ff);
+    zc.addDataPointNumber("double", dd);
+    zc.addDataPointString("char_p", cc);
+    zc.addDataPointString("string", s);
 }
 
 void loop()
