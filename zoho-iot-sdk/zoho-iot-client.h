@@ -48,10 +48,12 @@ private:
   char *_device_token;
   const char *_mqtt_server = "172.22.138.253"; //Shahul IP
   const unsigned int _port = 1883;
+  const char *_publish_topic = "test_topic9876";
 
-  std::map<const char *, data> dataPointsMap;
+  std::map<std::string, data> dataPointsMap;
+
   template <typename T>
-  inline bool addDataPoint(const char *key, value_types type, T val)
+  inline bool addDataPoint(const char key[], value_types type, T val)
   {
     if (type == TYPE_INT)
     {
@@ -81,6 +83,7 @@ public:
   inline ~ZohoIOTClient() {}
   void init(char *device_id, char *device_token);
   bool connect();
+  bool dispatch();
 
   inline bool addDataPointNumber(const char *key, int value)
   {

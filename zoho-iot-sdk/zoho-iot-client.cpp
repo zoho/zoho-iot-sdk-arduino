@@ -1,7 +1,4 @@
 #include "zoho-iot-client.h"
-// #include "IPAddress.h"
-// #include "Client.h"
-// #include "Stream.h"
 
 void ZohoIOTClient::init(char *device_id, char *device_token)
 {
@@ -10,6 +7,51 @@ void ZohoIOTClient::init(char *device_id, char *device_token)
     _device_id = device_id;
     _device_token = device_token;
     _mqtt_client.setServer(_mqtt_server, _port);
+}
+
+bool ZohoIOTClient::dispatch()
+{
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+    root["device_id"] = _device_id;
+    JsonObject &dataObj = root.createNestedObject("data");
+
+    std::map<std::string, data>::iterator it = dataPointsMap.begin();
+    while (it != dataPointsMap.end())
+    {
+        data value = it->second;
+        switch (value.type)
+        {
+        case TYPE_INT:
+        {
+            dataObj[it->first.c_str()] = value.val.i_val;
+            break;
+        }
+        case TYPE_DOUBLE:
+        {
+            dataObj[it->first.c_str()] = value.val.d_val;
+            break;
+        }
+        case TYPE_CHAR:
+        {
+            dataObj[it->first.c_str()] = value.val.s_val;
+            break;
+        }
+        default:
+        {
+            return false;
+        }
+        }
+        it++;
+    }
+    int size = root.measureLength() + 1;
+    char payloadMsg[size];
+    root.printTo(payloadMsg, size);
+
+    Serial.print("Payload message : ");
+    Serial.println(payloadMsg);
+
+    return _mqtt_client.publish(_publish_topic, payloadMsg);
 }
 
 bool ZohoIOTClient::connect()
