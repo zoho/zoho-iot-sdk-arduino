@@ -46,8 +46,8 @@ private:
   PubSubClient _mqtt_client;
   char *_device_id;
   char *_device_token;
-  const char *_mqtt_server = "172.22.138.253"; //Shahul IP
-  // const char *_mqtt_server = "172.22.142.33";  //kishan IP
+  // const char *_mqtt_server = "172.22.138.253"; //Shahul IP
+  const char *_mqtt_server = "172.22.142.33"; //kishan IP
   const unsigned int _port = 1883;
   const char *_publish_topic = "test_topic9876";
 
@@ -56,17 +56,7 @@ private:
   template <typename T>
   inline bool addDataPoint(const char key[], value_types type, T val)
   {
-    if (type == TYPE_INT)
-    {
-      data dp(type, val);
-      dataPointsMap.insert(make_pair(key, dp));
-    }
-    else if (type == TYPE_DOUBLE)
-    {
-      data dp(type, val);
-      dataPointsMap.insert(make_pair(key, dp));
-    }
-    else if (type == TYPE_CHAR)
+    if (type == TYPE_INT || type == TYPE_CHAR || type == TYPE_DOUBLE)
     {
       data dp(type, val);
       dataPointsMap.insert(make_pair(key, dp));
@@ -86,6 +76,7 @@ public:
   bool connect();
   bool dispatch();
   bool publish(char *message);
+  bool subscribe(char *topic, MQTT_CALLBACK_SIGNATURE);
   inline void yield()
   {
     _mqtt_client.loop();

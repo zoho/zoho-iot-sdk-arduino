@@ -55,16 +55,31 @@ void setup()
     Serial.println("Ready!");
 }
 
+void on_message(char *topic, byte *payload, unsigned int length)
+{
+    String msg = "";
+    for (unsigned int itr = 0; itr < length; itr++)
+    {
+        msg += (char)payload[itr];
+    }
+    Serial.print("[ ");
+    Serial.print(topic);
+    Serial.print(" ] : ");
+    Serial.print(msg);
+    Serial.println();
+}
+
 void loop()
 {
     //Watchdog for Wifi & MQTT connection status.
     //Automatically reconnect in case of connection failure.
     setup_wifi();
     zc.connect();
-
+    zc.publish((char *)"Zoho IoT");
+    zc.subscribe((char *)"test_topic9876", on_message);
     //     digitalWrite(2, HIGH); // turn the LED on (HIGH is the voltage level)
     //     delay(1000);           // wait for a second
     //     digitalWrite(2, LOW);  // turn the LED off by making the voltage LOW
-    //     delay(1000);
+    delay(1000);
     zc.yield();
 }

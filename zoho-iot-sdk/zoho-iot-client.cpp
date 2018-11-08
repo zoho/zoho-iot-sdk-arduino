@@ -17,6 +17,7 @@ bool ZohoIOTClient::publish(char *message)
 
 bool ZohoIOTClient::dispatch()
 {
+    //Form json payload and publish to HUB...
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
     root["device_id"] = _device_id;
@@ -59,6 +60,14 @@ bool ZohoIOTClient::dispatch()
     Serial.println(payloadMsg);
 
     return publish(payloadMsg);
+}
+
+bool ZohoIOTClient::subscribe(char *topic, MQTT_CALLBACK_SIGNATURE)
+{
+    //Subscribe to topic and set method to be called message on that topic.
+    //TODO: Empty validation
+    _mqtt_client.setCallback(callback);
+    return _mqtt_client.subscribe(topic);
 }
 
 bool ZohoIOTClient::connect()
