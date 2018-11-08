@@ -1,5 +1,4 @@
-#include <ESP8266WiFi.h>
-#include <ESP8266HTTPClient.h>
+#include <WiFi.h>
 #include <zoho-iot-client.h>
 
 #define ssid "Zoho-Guest"
@@ -10,8 +9,6 @@
 
 WiFiClient espClient;
 ZohoIOTClient zc(espClient);
-
-int count = 0;
 
 void setup_wifi()
 {
@@ -42,6 +39,20 @@ void setup_wifi()
     Serial.println(WiFi.localIP());
 }
 
+void on_message(char *topic, byte *payload, unsigned int length)
+{
+    String msg = "";
+    for (unsigned int itr = 0; itr < length; itr++)
+    {
+        msg += (char)payload[itr];
+    }
+    Serial.print("[ ");
+    Serial.print(topic);
+    Serial.print(" ] : ");
+    Serial.print(msg);
+    Serial.println();
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -49,22 +60,8 @@ void setup()
     setup_wifi();
     zc.init(DEVICE_ID, DEVICE_TOKEN);
     zc.connect();
-
+    zc.subscribe("test_topic9876", on_message);
     Serial.println("Ready!");
-
-    //Test data points
-    int ii = 10;
-    float ff = 10.5;
-    double dd = 10.3;
-    const char *cc = "asdf";
-    string s = "asdfasdf";
-
-    zc.addDataPointNumber("number", 10);
-    zc.addDataPointNumber("int", ii);
-    zc.addDataPointNumber("float", ff);
-    zc.addDataPointNumber("double", dd);
-    zc.addDataPointString("char_p", cc);
-    zc.addDataPointString("string", s);
 }
 
 void loop()
@@ -73,12 +70,8 @@ void loop()
     //Automatically reconnect in case of connection failure.
     setup_wifi();
     zc.connect();
-
-    count = count + 1;
-    Serial.println(count);
-
-    digitalWrite(2, HIGH); // turn the LED on (HIGH is the voltage level)
-    delay(1000);           // wait for a second
-    digitalWrite(2, LOW);  // turn the LED off by making the voltage LOW
+    zc.addDataPointNumber("temp", rand());
+    zc.dispatch();
+    zc.yield();
     delay(1000);
 }
