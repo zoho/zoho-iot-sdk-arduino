@@ -1,4 +1,4 @@
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
 #include <zoho-iot-client.h>
 
 #define ssid "Zoho-Guest"
@@ -9,8 +9,6 @@
 
 WiFiClient espClient;
 ZohoIOTClient zc(espClient);
-
-int count = 0;
 
 void setup_wifi()
 {
@@ -41,20 +39,6 @@ void setup_wifi()
     Serial.println(WiFi.localIP());
 }
 
-void setup()
-{
-    Serial.begin(115200);
-    Serial.println("Booting Up!");
-    setup_wifi();
-    zc.init(DEVICE_ID, DEVICE_TOKEN);
-    zc.connect();
-    zc.addDataPointNumber("integer", 10);
-    zc.addDataPointNumber("double", 10.234);
-    zc.addDataPointString("string", "arduino");
-    zc.dispatch();
-    Serial.println("Ready!");
-}
-
 void on_message(char *topic, byte *payload, unsigned int length)
 {
     String msg = "";
@@ -69,17 +53,25 @@ void on_message(char *topic, byte *payload, unsigned int length)
     Serial.println();
 }
 
+void setup()
+{
+    Serial.begin(115200);
+    Serial.println("Booting Up!");
+    setup_wifi();
+    zc.init(DEVICE_ID, DEVICE_TOKEN);
+    zc.connect();
+    zc.subscribe("test_topic9876", on_message);
+    Serial.println("Ready!");
+}
+
 void loop()
 {
     //Watchdog for Wifi & MQTT connection status.
     //Automatically reconnect in case of connection failure.
     setup_wifi();
     zc.connect();
-    zc.publish((char *)"Zoho IoT");
-    zc.subscribe((char *)"test_topic9876", on_message);
-    //     digitalWrite(2, HIGH); // turn the LED on (HIGH is the voltage level)
-    //     delay(1000);           // wait for a second
-    //     digitalWrite(2, LOW);  // turn the LED off by making the voltage LOW
-    delay(1000);
+    zc.addDataPointNumber("temp", rand());
+    zc.dispatch();
     zc.yield();
+    delay(1000);
 }

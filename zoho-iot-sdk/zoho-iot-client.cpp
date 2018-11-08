@@ -55,7 +55,7 @@ bool ZohoIOTClient::dispatch()
     int size = root.measureLength() + 1;
     char payloadMsg[size];
     root.printTo(payloadMsg, size);
-
+    //TODO: remove below debug message(payload message).
     Serial.print("Payload message : ");
     Serial.println(payloadMsg);
 
