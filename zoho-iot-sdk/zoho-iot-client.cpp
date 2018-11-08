@@ -9,6 +9,12 @@ void ZohoIOTClient::init(char *device_id, char *device_token)
     _mqtt_client.setServer(_mqtt_server, _port);
 }
 
+bool ZohoIOTClient::publish(char *message)
+{
+    //TODO: Empty validation
+    return _mqtt_client.publish(_publish_topic, message);
+}
+
 bool ZohoIOTClient::dispatch()
 {
     DynamicJsonBuffer jsonBuffer;
@@ -44,6 +50,7 @@ bool ZohoIOTClient::dispatch()
         }
         it++;
     }
+    dataPointsMap.clear();
     int size = root.measureLength() + 1;
     char payloadMsg[size];
     root.printTo(payloadMsg, size);
@@ -51,7 +58,7 @@ bool ZohoIOTClient::dispatch()
     Serial.print("Payload message : ");
     Serial.println(payloadMsg);
 
-    return _mqtt_client.publish(_publish_topic, payloadMsg);
+    return publish(payloadMsg);
 }
 
 bool ZohoIOTClient::connect()
