@@ -22,6 +22,13 @@ private:
     const char *s_val;
   } value;
 
+  typedef enum
+  {
+    SUCCESS = 0,
+    FAILURE = -1,
+    CONNECTION_ERROR = -2
+  } transactionStatus;
+
   typedef struct data
   {
     value_types type;
@@ -50,6 +57,7 @@ private:
   const char *_mqtt_server = "172.22.142.33"; //kishan IP
   const unsigned int _port = 1883;
   const char *_publish_topic = "test_topic9876";
+  const unsigned int _retry_limit = 5;
 
   std::map<std::string, data> dataPointsMap;
 
@@ -73,10 +81,10 @@ public:
   inline ZohoIOTClient(Client &client) : _mqtt_client(client) {}
   inline ~ZohoIOTClient() {}
   void init(char *device_id, char *device_token);
-  bool connect();
-  bool dispatch();
-  bool publish(char *message);
-  bool subscribe(char *topic, MQTT_CALLBACK_SIGNATURE);
+  int connect();
+  int dispatch();
+  int publish(char *message);
+  int subscribe(char *topic, MQTT_CALLBACK_SIGNATURE);
   inline void yield()
   {
     _mqtt_client.loop();

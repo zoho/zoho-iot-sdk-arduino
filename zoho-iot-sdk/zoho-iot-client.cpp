@@ -1,5 +1,6 @@
 #include "zoho-iot-client.h"
 
+unsigned int retryCount = 0;
 void ZohoIOTClient::init(char *device_id, char *device_token)
 {
     //TODO: Empty validation
@@ -9,13 +10,20 @@ void ZohoIOTClient::init(char *device_id, char *device_token)
     _mqtt_client.setServer(_mqtt_server, _port);
 }
 
-bool ZohoIOTClient::publish(char *message)
+int ZohoIOTClient::publish(char *message)
 {
     //TODO: Empty validation
-    return _mqtt_client.publish(_publish_topic, message);
+    if (_mqtt_client.publish(_publish_topic, message) == true)
+    {
+        return SUCCESS;
+    }
+    else
+    {
+        return FAILURE;
+    }
 }
 
-bool ZohoIOTClient::dispatch()
+int ZohoIOTClient::dispatch()
 {
     //Form json payload and publish to HUB...
     DynamicJsonBuffer jsonBuffer;
@@ -46,7 +54,7 @@ bool ZohoIOTClient::dispatch()
         }
         default:
         {
-            return false;
+            return FAILURE;
         }
         }
         it++;
@@ -62,15 +70,22 @@ bool ZohoIOTClient::dispatch()
     return publish(payloadMsg);
 }
 
-bool ZohoIOTClient::subscribe(char *topic, MQTT_CALLBACK_SIGNATURE)
+int ZohoIOTClient::subscribe(char *topic, MQTT_CALLBACK_SIGNATURE)
 {
     //Subscribe to topic and set method to be called message on that topic.
     //TODO: Empty validation
     _mqtt_client.setCallback(callback);
-    return _mqtt_client.subscribe(topic);
+    if (_mqtt_client.subscribe(topic) == true)
+    {
+        return SUCCESS;
+    }
+    else
+    {
+        return FAILURE;
+    }
 }
 
-bool ZohoIOTClient::connect()
+int ZohoIOTClient::connect()
 {
     //TODO: Empty validation
     //TODO: resubscribe old subscriptions if reconnecting.
@@ -78,7 +93,7 @@ bool ZohoIOTClient::connect()
     if (_mqtt_client.connected())
     {
         //Already having an active connecting with HUB... No job to do here..
-        return true;
+        return SUCCESS;
     }
 
     Serial.println("Initiating connection with HUB...!");
@@ -86,20 +101,31 @@ bool ZohoIOTClient::connect()
     while (!_mqtt_client.connected())
     {
         Serial.println("Connecting..");
+        if (retryCount > _retry_limit)
+        {
+            Serial.println("retry limit exceeded");
+            return CONNECTION_ERROR;
+        }
 
         if (_mqtt_client.connect(_device_id, _device_id, _device_token))
         {
             Serial.println("Successfully Connected!");
-
-            return _mqtt_client.publish("hello", "Connected!");
+            retryCount = 0;
+            if (_mqtt_client.publish("hello", "Connected!") == true)
+                return SUCCESS;
+            else
+                return FAILURE;
         }
         else
         {
+            Serial.print("RetryCount: ");
+            Serial.println(retryCount);
             Serial.print("Failed. rc:");
             Serial.print(_mqtt_client.state());
             Serial.println(" Retry in 5 seconds");
             delay(5000);
         }
+        retryCount++;
     }
-    return true;
+    return SUCCESS;
 }
