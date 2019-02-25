@@ -1,10 +1,19 @@
 #ifndef ZOHO_IOT_CLIENT_H_
 #define ZOHO_IOT_CLIENT_H_
-#include <Arduino.h>
+//#include <Arduino.h>
+#include <stdlib.h>
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 #include <map>
+#include <iostream>
 using namespace std;
+
+#define delay(x) \
+  {              \
+  }
+
+// #define Serial.println TRACE
+// #define TRACE.println(x) { std::cout << x << std::flush; }
 
 class ZohoIOTClient
 {
@@ -50,7 +59,7 @@ private:
     }
   } data;
 
-  PubSubClient _mqtt_client;
+  PubSubClient *_mqtt_client;
   char *_device_id;
   char *_device_token;
   // const char *_mqtt_server = "172.22.138.253"; //Shahul IP
@@ -64,6 +73,10 @@ private:
   template <typename T>
   inline bool addDataPoint(const char key[], value_types type, T val)
   {
+    if (key == NULL)
+    {
+      return false;
+    }
     if (type == TYPE_INT || type == TYPE_CHAR || type == TYPE_DOUBLE)
     {
       data dp(type, val);
@@ -71,23 +84,29 @@ private:
     }
     else
     {
-      Serial.println("Error: Unsupported data type.");
+      // Serial.println("Error: Unsupported data type.");
+      // TRACE("Error: Unsupported data type.");
       return false;
     }
     return true;
   }
 
 public:
-  inline ZohoIOTClient(Client &client) : _mqtt_client(client) {}
+  inline ZohoIOTClient() {}
+  inline ZohoIOTClient(PubSubClient &client) : _mqtt_client(&client) {}
+  inline ZohoIOTClient(Client &client)
+  {
+    _mqtt_client->setClient(client);
+  }
   inline ~ZohoIOTClient() {}
-  void init(char *device_id, char *device_token);
+  int init(char *device_id, char *device_token);
   int connect();
   int dispatch();
   int publish(char *message);
   int subscribe(char *topic, MQTT_CALLBACK_SIGNATURE);
-  inline void yield()
+  inline void zyield()
   {
-    _mqtt_client.loop();
+    _mqtt_client->loop();
   }
 
   inline bool addDataPointNumber(const char *key, int value)
@@ -100,10 +119,18 @@ public:
   }
   inline bool addDataPointString(const char *key, const char *value)
   {
+    if (value == NULL)
+    {
+      return false;
+    }
     return addDataPoint(key, TYPE_CHAR, value);
   }
   inline bool addDataPointString(const char *key, string value)
   {
+    if (value.empty())
+    {
+      return false;
+    }
     return addDataPoint(key, TYPE_CHAR, value.c_str());
   }
 };
