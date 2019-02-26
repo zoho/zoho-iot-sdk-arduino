@@ -13,7 +13,7 @@ include(CodeCoverage)
 set(CMAKE_CXX_FLAGS "-g -O0 -Wall -fprofile-arcs -ftest-coverage")
 
 # exclude /test and /ext directories from coverage analysis
-set(LCOV_REMOVE_EXTRA "'mock_libs/*'" "'unit_test/*'" "'ext/*'")
+set(LCOV_REMOVE_EXTRA "'mock_libs/*'" "'unit_test/*'" "'ext/*'" "'lib/*'")
 
 # cmake code coverage module target
 setup_target_for_coverage(unit_tests_coverage unit_tests coverage)
