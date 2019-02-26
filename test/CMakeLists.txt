@@ -11,10 +11,13 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 include(CodeCoverage)
 # test coverage build configuration for C++: debug build, no optimization, profiling enabled
 set(CMAKE_CXX_FLAGS "-g -O0 -Wall -fprofile-arcs -ftest-coverage")
+
 # exclude /test and /ext directories from coverage analysis
-set(LCOV_REMOVE_EXTRA "'test/*'" "'ext/*'")
+set(LCOV_REMOVE_EXTRA "'mock_libs/*'" "'unit_test/*'" "'ext/*'")
+
 # cmake code coverage module target
 setup_target_for_coverage(unit_tests_coverage unit_tests coverage)
+
 # --- Coverage specific configuration --- end
 
 
