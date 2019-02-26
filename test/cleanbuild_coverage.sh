@@ -1,5 +1,8 @@
 cd test
 rm -rf build
+
+set -e
+
 mkdir build
 cd build
 
@@ -13,3 +16,5 @@ lcov -c -d . -o coverage_swp.info
 lcov --REMOVE coverage_swp.info 'tests/*' '/usr/*' '/zoho-iot-sdk-arduino/test/*' --OUTPUT-FILE coverage.info
 
 genhtml coverage.info -o coverage
+
+gcovr -x -r ../../ -e ../../test/  -o cobertura.xml
