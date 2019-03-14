@@ -1,4 +1,5 @@
 # Zoho IoT Arduino SDK
+Latest Build Status:[![Build Status](http://172.24.151.80:8080/buildStatus/icon?job=ardunio-sdk-commits)](http://172.24.151.80:8080/job/ardunio-sdk-commits/)
 
 ## Overview
 
