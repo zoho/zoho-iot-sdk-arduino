@@ -8,13 +8,6 @@
 #include <iostream>
 using namespace std;
 
-#define delay(x) \
-  {              \
-  }
-
-// #define Serial.println TRACE
-// #define TRACE.println(x) { std::cout << x << std::flush; }
-
 class ZohoIOTClient
 {
 private:

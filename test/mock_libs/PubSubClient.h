@@ -12,6 +12,8 @@
 #define MQTT_CALLBACK_SIGNATURE void (*callback)(char*, uint8_t*, unsigned int)
 #endif
 
+#define delay(x) { }
+
 class PubSubClient
 {
     public:
