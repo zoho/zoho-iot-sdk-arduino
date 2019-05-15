@@ -30,10 +30,13 @@ This SDK will act as a library for Arduino Development Environment. The list of 
 
 Make sure you are already installed the below libraries on your Arduino IDE:
 
-- `PubSubClient`
+- [`Async-mqtt-client`](https://github.com/marvinroger/async-mqtt-client)
+- [`ESPAsyncTCP (ESP8266)`](https://github.com/me-no-dev/ESPAsyncTCP)
+- [`AsyncTCP (ESP32)`](https://github.com/me-no-dev/AsyncTCP)
 - `ArduinoJson`
 - `Wifi / Ethernet drivers based on your device type`
 
+If not installed , download them using "Download ZIP" option from the respective repositories and unzip them in libraries folder of your Arduino IDE or import them in process similar to importing our SDK as mentioned below.
 ### Adding the Library
 
 Follow the below steps to import this SDK as Library in Arduino:

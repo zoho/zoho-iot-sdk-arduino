@@ -26,11 +26,11 @@ target_include_directories (unit_tests
 	PUBLIC ${PROJECT_SOURCE_DIR}/lib/fakeit_master/single_header/catch
 )
 
-list(   APPEND paho_srcs 
-        "${PROJECT_SOURCE_DIR}/mock_libs/PubSubClient.cpp" 
-        "${PROJECT_SOURCE_DIR}/mock_libs/PubSubClient.h" )
+list(   APPEND async_mqttclient_srcs
+        "${PROJECT_SOURCE_DIR}/mock_libs/AsyncMqttClient.cpp"
+        "${PROJECT_SOURCE_DIR}/mock_libs/AsyncMqttClient.h" )
 
-ADD_LIBRARY(pubsub_lib STATIC ${paho_srcs})
+ADD_LIBRARY(async_mqttclient_lib STATIC ${async_mqttclient_srcs})
 
-target_link_libraries(unit_tests pubsub_lib)
+target_link_libraries(unit_tests async_mqttclient_lib)
 

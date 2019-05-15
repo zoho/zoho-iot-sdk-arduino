@@ -1,11 +1,16 @@
 #ifndef ZOHO_IOT_CLIENT_H_
 #define ZOHO_IOT_CLIENT_H_
-//#include <Arduino.h>
+
 #include <stdlib.h>
 #include <ArduinoJson.h>
-#include <PubSubClient.h>
+#include <AsyncMqttClient.h>
 #include <map>
 #include <iostream>
+#include <cstring>
+
+#define topic_prefix "/devices/"
+#define telemetry "/telemetry"
+
 using namespace std;
 
 class ZohoIOTClient
@@ -52,16 +57,15 @@ private:
     }
   } data;
 
-  PubSubClient *_mqtt_client;
+  AsyncMqttClient *_mqtt_client;
   char *_device_id;
   char *_device_token;
-  // const char *_mqtt_server = "172.22.138.253"; //Shahul IP
-  const char *_mqtt_server = "172.22.142.33"; //kishan IP
-  const unsigned int _port = 1883;
-  const char *_publish_topic = "test_topic9876";
+  const char *_mqtt_server = "iotdevices.localzoho.com"; //HUB IP
+  int _port = 1883;
+  char *_publish_topic;
   const unsigned int _retry_limit = 5;
 
-  std::map<std::string, data> dataPointsMap;
+  std::map<string, data> dataPointsMap;
 
   template <typename T>
   inline bool addDataPoint(const char key[], value_types type, T val)
@@ -77,31 +81,31 @@ private:
     }
     else
     {
-      // Serial.println("Error: Unsupported data type.");
-      // TRACE("Error: Unsupported data type.");
+      //Serial.println("Error: Unsupported data type.");
       return false;
     }
     return true;
   }
 
+protected:
+  void formTopics(char *device_id);
+
 public:
-  inline ZohoIOTClient() {}
-  inline ZohoIOTClient(PubSubClient &client) : _mqtt_client(&client) {}
-  inline ZohoIOTClient(Client &client)
+  inline ZohoIOTClient()
   {
-    _mqtt_client->setClient(client);
+    _mqtt_client = new AsyncMqttClient();
+  }
+  inline ZohoIOTClient(AsyncMqttClient *client)
+  {
+    _mqtt_client = client;
   }
   inline ~ZohoIOTClient() {}
   int init(char *device_id, char *device_token);
   int connect();
-  int dispatch();
   int publish(char *message);
-  int subscribe(char *topic, MQTT_CALLBACK_SIGNATURE);
-  inline void zyield()
-  {
-    _mqtt_client->loop();
-  }
-
+  int dispatch();
+  int subscribe(char *topic);
+  int disconnect();
   inline bool addDataPointNumber(const char *key, int value)
   {
     return addDataPoint(key, TYPE_INT, value);
@@ -127,5 +131,4 @@ public:
     return addDataPoint(key, TYPE_CHAR, value.c_str());
   }
 };
-
 #endif
