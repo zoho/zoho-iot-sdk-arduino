@@ -10,6 +10,7 @@
 
 #define topic_prefix "/devices/"
 #define telemetry "/telemetry"
+#define command "/command"
 
 using namespace std;
 
@@ -62,7 +63,7 @@ private:
   char *_device_token;
   const char *_mqtt_server = "iotdevices.localzoho.com"; //HUB IP
   int _port = 1883;
-  char *_publish_topic;
+  char *_publish_topic,*_command_topic;
   const unsigned int _retry_limit = 5;
 
   std::map<string, data> dataPointsMap;

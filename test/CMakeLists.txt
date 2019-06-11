@@ -28,7 +28,9 @@ target_include_directories (unit_tests
 
 list(   APPEND async_mqttclient_srcs
         "${PROJECT_SOURCE_DIR}/mock_libs/AsyncMqttClient.cpp"
-        "${PROJECT_SOURCE_DIR}/mock_libs/AsyncMqttClient.h" )
+        "${PROJECT_SOURCE_DIR}/mock_libs/AsyncMqttClient.h"
+        "${PROJECT_SOURCE_DIR}/mock_libs/MessageProperties.hpp"
+         )
 
 ADD_LIBRARY(async_mqttclient_lib STATIC ${async_mqttclient_srcs})
 

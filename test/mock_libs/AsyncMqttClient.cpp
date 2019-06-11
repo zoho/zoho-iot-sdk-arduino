@@ -6,6 +6,7 @@ bool AsyncMqttClient::connected()
 {
     return true;
 }
+
 uint16_t AsyncMqttClient::publish(const char *topic, uint8_t qos, bool retain, const char *payload, size_t length, bool dup, uint16_t message_id)
 {
     return message_id;
@@ -31,4 +32,17 @@ void AsyncMqttClient::disconnect() {}
 uint16_t AsyncMqttClient::subscribe(const char *topic, uint8_t qos)
 {
     return qos;
+}
+
+AsyncMqttClient &AsyncMqttClient::onMessage(AsyncMqttClient::OnMessageUserCallback callback)
+{
+    return *this;
+}
+AsyncMqttClient &AsyncMqttClient::onPublish(AsyncMqttClient::OnPublishUserCallback callback)
+{
+    return *this;
+}
+AsyncMqttClient& AsyncMqttClient::onSubscribe(AsyncMqttClient::OnSubscribeUserCallback callback)
+{
+    return *this;
 }
