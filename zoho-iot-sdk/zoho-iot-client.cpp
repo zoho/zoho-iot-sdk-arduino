@@ -4,10 +4,38 @@ unsigned int retryCount = 0;
 void ZohoIOTClient::formTopics(char *device_id)
 {
     //TODO: To find alternative for new operator for string concatenation.
-    int topic_size = strlen(topic_prefix) + strlen(device_id) + strlen(telemetry);
-    _publish_topic = new char[topic_size+1];
-    snprintf(_publish_topic, topic_size,"%s%s%s", topic_prefix, device_id, telemetry);
+    int publish_topic_size = strlen(topic_prefix) + strlen(device_id) + strlen(telemetry) + 1;
+    int command_topic_size = strlen(topic_prefix) + strlen(device_id) + strlen(command) + 1;
+    _publish_topic = new char[publish_topic_size];
+    _command_topic = new char[command_topic_size];
+    snprintf(_publish_topic, publish_topic_size, "%s%s%s", topic_prefix, device_id, telemetry);
+    snprintf(_command_topic, command_topic_size, "%s%s%s", topic_prefix, device_id, command);
 }
+
+// void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
+// {
+//     //Serial.println("Publish received.");
+//     //Serial.print("  topic: ");
+//     //Serial.println(topic);
+//     //Serial.print(" Payload: ");
+//     //Serial.println(payload);
+// }
+
+// void onMqttPublish(uint16_t packetId)
+// {
+//     //Serial.println("Publish acknowledged.");
+//     //Serial.print("  packetId: ");
+//     //Serial.println(packetId);
+// }
+
+// void onMqttSubscribe(uint16_t packetId, uint8_t qos)
+// {
+//     //Serial.println("Subscribe acknowledged.");
+//     //Serial.print("  packetId: ");
+//     //Serial.println(packetId);
+//     //Serial.print("  qos: ");
+//     //Serial.println(qos);
+// }
 
 int ZohoIOTClient::init(char *device_id, char *device_token)
 {
@@ -22,6 +50,9 @@ int ZohoIOTClient::init(char *device_id, char *device_token)
     _mqtt_client->setServer(_mqtt_server, _port);
     _mqtt_client->setClientId(_device_id);
     _mqtt_client->setCredentials(_device_id, _device_token);
+    //_mqtt_client->onMessage(onMqttMessage);
+    //_mqtt_client->onPublish(onMqttPublish);
+    //_mqtt_client->onSubscribe(onMqttSubscribe);
     formTopics(device_id);
     return SUCCESS;
 }
