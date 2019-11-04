@@ -6,8 +6,8 @@
 #include "zoho-iot-client.h"
 
 using namespace fakeit;
-char device_id[] = "device_id";
-char device_token[] = "device_token";
+char mqtt_user_name[] = "/domain_name/v1/devices/client_id/connect";
+char mqtt_password[] = "mqtt_password";
 Mock<AsyncMqttClient> mock;
 
 TEST_CASE("Init")
@@ -17,15 +17,15 @@ TEST_CASE("Init")
     Fake(Method(mock, setCredentials));
     AsyncMqttClient &fake_client = mock.get();
     ZohoIOTClient *zc = new ZohoIOTClient(&fake_client);
-    SECTION("InitMethod_WithNotNULLArguments__ShouldSucceed")
+    SECTION("InitMethod_WithNotNULLArguments_ShouldSucceed")
     {
         // Init method with non-NULL parameters returns success.
-        REQUIRE(zc->init(device_id, device_token) == 0);
+        REQUIRE(zc->init(mqtt_user_name, mqtt_password) == 0);
     }
     SECTION("InitMehod_WithNULLArguments_ShouldFail")
     {
         // Init method with NULL parameters returns failure
-        REQUIRE(zc->init(NULL, device_token) == -1);
+        REQUIRE(zc->init(NULL, mqtt_password) == -1);
     }
 }
 
@@ -40,7 +40,7 @@ TEST_CASE("Connect")
         fakeit::When(Method(mock, connected)).AlwaysReturn(true);
         AsyncMqttClient &fake_client = mock.get();
         ZohoIOTClient *zc = new ZohoIOTClient(&fake_client);
-        zc->init(device_id, device_token);
+        zc->init(mqtt_user_name, mqtt_password);
         REQUIRE(zc->connect() == 0);
     }
     SECTION("ConnectMehod_WithNewConnection_ShouldSucceeed")
@@ -121,6 +121,7 @@ TEST_CASE("Publish")
         fakeit::When(OverloadedMethod(mock, publish, uint16_t(const char *, uint8_t, bool, const char *, size_t, bool, uint16_t))).AlwaysReturn(1);
         auto &fake_client = mock.get();
         ZohoIOTClient *zc = new ZohoIOTClient(&fake_client);
+        zc->init(mqtt_user_name, mqtt_password);
         REQUIRE(zc->publish(message) == 0);
     }
 
@@ -131,6 +132,7 @@ TEST_CASE("Publish")
         fakeit::When(OverloadedMethod(mock, publish, uint16_t(const char *, uint8_t, bool, const char *, size_t, bool, uint16_t))).AlwaysReturn(1);
         auto &fake_client = mock.get();
         ZohoIOTClient *zc = new ZohoIOTClient(&fake_client);
+        zc->init(mqtt_user_name, mqtt_password);
         REQUIRE(zc->publish(message) == -1);
     }
 
@@ -141,6 +143,7 @@ TEST_CASE("Publish")
         fakeit::When(OverloadedMethod(mock, publish, uint16_t(const char *, uint8_t, bool, const char *, size_t, bool, uint16_t))).AlwaysReturn(1);
         auto &fake_client = mock.get();
         ZohoIOTClient *zc = new ZohoIOTClient(&fake_client);
+        zc->init(mqtt_user_name, mqtt_password);
         REQUIRE(zc->publish(NULL) == -1);
     }
 }
@@ -182,6 +185,7 @@ TEST_CASE("Dispatch")
     fakeit::When(OverloadedMethod(mock, publish, uint16_t(const char *, uint8_t, bool, const char *, size_t, bool, uint16_t))).AlwaysReturn(1);
     auto &fake_client = mock.get();
     ZohoIOTClient *zc = new ZohoIOTClient(&fake_client);
+    zc->init(mqtt_user_name, mqtt_password);
     char key[] = "key";
     char value[] = "value";
     SECTION("DispatchMehod_WithIntegerAsDatapoint_ShouldSucceed")
@@ -196,7 +200,7 @@ TEST_CASE("Dispatch")
         zc->addDataPointNumber(key, 10.10);
         REQUIRE(zc->dispatch() == 0);
     }
-    SECTION("DispatchMehod_WithFloatAsDatapoint_ShouldSucceed")
+    SECTION("DispatchMehod_WithStringAsDatapoint_ShouldSucceed")
     {
         // Dispatch String return success.
         zc->addDataPointString(key, value);
@@ -208,6 +212,7 @@ TEST_CASE("Dispatch")
         fakeit::When(OverloadedMethod(mock, publish, uint16_t(const char *, uint8_t, bool, const char *, size_t, bool, uint16_t))).Return(0);
         auto &fake_client = mock.get();
         ZohoIOTClient *zc = new ZohoIOTClient(&fake_client);
+        zc->init(mqtt_user_name, mqtt_password);
         REQUIRE(zc->dispatch() == -1);
     }
 }
@@ -216,7 +221,7 @@ TEST_CASE("Disconnect")
 {
     SECTION("DisconnectMehod_WithActiveConnection_ShouldSucceed")
     {
-        fakeit::When(Method(mock, connected)).Return(1_Times(true),false);
+        fakeit::When(Method(mock, connected)).Return(1_Times(true), false);
         auto &fake_client = mock.get();
         ZohoIOTClient *zc = new ZohoIOTClient(&fake_client);
         REQUIRE(zc->disconnect() == 0);

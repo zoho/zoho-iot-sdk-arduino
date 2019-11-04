@@ -1,59 +1,86 @@
 #include "zoho-iot-client.h"
+#include <sstream>
 unsigned int retryCount = 0;
 
-void ZohoIOTClient::formTopics(char *device_id)
+void ZohoIOTClient::formMqttTopics(char *client_id)
 {
     //TODO: To find alternative for new operator for string concatenation.
-    int publish_topic_size = strlen(topic_prefix) + strlen(device_id) + strlen(telemetry) + 1;
-    int command_topic_size = strlen(topic_prefix) + strlen(device_id) + strlen(command) + 1;
+    int publish_topic_size = strlen(topic_prefix) + strlen(client_id) + strlen(telemetry) + 1;
+    int command_topic_size = strlen(topic_prefix) + strlen(client_id) + strlen(command) + 1;
     _publish_topic = new char[publish_topic_size];
     _command_topic = new char[command_topic_size];
-    snprintf(_publish_topic, publish_topic_size, "%s%s%s", topic_prefix, device_id, telemetry);
-    snprintf(_command_topic, command_topic_size, "%s%s%s", topic_prefix, device_id, command);
+    snprintf(_publish_topic, publish_topic_size, "%s%s%s", topic_prefix, client_id, telemetry);
+    snprintf(_command_topic, command_topic_size, "%s%s%s", topic_prefix, client_id, command);
 }
 
-// void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
-// {
-//     //Serial.println("Publish received.");
-//     //Serial.print("  topic: ");
-//     //Serial.println(topic);
-//     //Serial.print(" Payload: ");
-//     //Serial.println(payload);
-// }
-
-// void onMqttPublish(uint16_t packetId)
-// {
-//     //Serial.println("Publish acknowledged.");
-//     //Serial.print("  packetId: ");
-//     //Serial.println(packetId);
-// }
-
-// void onMqttSubscribe(uint16_t packetId, uint8_t qos)
-// {
-//     //Serial.println("Subscribe acknowledged.");
-//     //Serial.print("  packetId: ");
-//     //Serial.println(packetId);
-//     //Serial.print("  qos: ");
-//     //Serial.println(qos);
-// }
-
-int ZohoIOTClient::init(char *device_id, char *device_token)
+bool ZohoIOTClient::extractMqttServerAndDeviceDetails(const string &mqttUserName)
 {
-    if (device_id == NULL || device_token == NULL)
+    vector<string> mqttUserNameVector;
+    stringstream stringStream(mqttUserName);
+    string item;
+
+    while (getline(stringStream, item, '/'))
+    {
+        mqttUserNameVector.push_back(item);
+    }
+
+    if (mqttUserNameVector.size() != 6 || mqttUserNameVector[1].empty() || mqttUserNameVector[4].empty())
+    {
+        return false;
+    }
+
+    _mqtt_server = strdup(mqttUserNameVector[1].c_str());
+    _client_id = strdup(mqttUserNameVector[4].c_str());
+    return true;
+}
+
+void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
+{
+    //Serial.println("Publish received.");
+    //Serial.print("  topic: ");
+    //Serial.println(topic);
+    //Serial.print(" Payload: ");
+    //Serial.println(payload);
+}
+
+void onMqttPublish(uint16_t packetId)
+{
+    //Serial.println("Publish acknowledged.");
+    //Serial.print("  packetId: ");
+    //Serial.println(packetId);
+}
+
+void onMqttSubscribe(uint16_t packetId, uint8_t qos)
+{
+    // Serial.println("Subscribe acknowledged.");
+    // Serial.print("  packetId: ");
+    // Serial.println(packetId);
+    // Serial.print("  qos: ");
+    //Serial.println(qos);
+}
+
+int ZohoIOTClient::init(char *mqttUserName, char *mqttPassword)
+{
+    if (mqttUserName == NULL || mqttPassword == NULL)
     {
         return FAILURE;
     }
     //TODO: Empty validation
     //TODO: unsubscribe old subscriptions.
-    _device_id = device_id;
-    _device_token = device_token;
+    _mqtt_user_name = mqttUserName;
+    _mqtt_password = mqttPassword;
+
+    if (!extractMqttServerAndDeviceDetails(mqttUserName))
+    {
+        return FAILURE;
+    }
     _mqtt_client->setServer(_mqtt_server, _port);
-    _mqtt_client->setClientId(_device_id);
-    _mqtt_client->setCredentials(_device_id, _device_token);
-    //_mqtt_client->onMessage(onMqttMessage);
-    //_mqtt_client->onPublish(onMqttPublish);
-    //_mqtt_client->onSubscribe(onMqttSubscribe);
-    formTopics(device_id);
+    _mqtt_client->setClientId(_client_id);
+    _mqtt_client->setCredentials(_mqtt_user_name, _mqtt_password);
+    _mqtt_client->onMessage(onMqttMessage);
+    _mqtt_client->onPublish(onMqttPublish);
+    _mqtt_client->onSubscribe(onMqttSubscribe);
+    formMqttTopics(_client_id);
     return SUCCESS;
 }
 
@@ -79,7 +106,7 @@ int ZohoIOTClient::dispatch()
     //Form json payload and publish to HUB...
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
-    root["device_id"] = _device_id;
+    root["device_id"] = _client_id;
     JsonObject &dataObj = root.createNestedObject("data");
 
     std::map<std::string, data>::iterator it = dataPointsMap.begin();
