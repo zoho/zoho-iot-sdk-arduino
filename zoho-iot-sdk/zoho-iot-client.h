@@ -7,10 +7,11 @@
 #include <map>
 #include <iostream>
 #include <cstring>
+#include <vector>
 
 #define topic_prefix "/devices/"
 #define telemetry "/telemetry"
-#define command "/command"
+#define command "/commands"
 
 using namespace std;
 
@@ -59,11 +60,12 @@ private:
   } data;
 
   AsyncMqttClient *_mqtt_client;
-  char *_device_id;
-  char *_device_token;
-  const char *_mqtt_server = "iotdevices.localzoho.com"; //HUB IP
+  char *_mqtt_user_name;
+  char *_mqtt_password;
+  char *_client_id;
+  char *_mqtt_server;
   int _port = 1883;
-  char *_publish_topic,*_command_topic;
+  char *_publish_topic, *_command_topic;
   const unsigned int _retry_limit = 5;
 
   std::map<string, data> dataPointsMap;
@@ -89,8 +91,8 @@ private:
   }
 
 protected:
-  void formTopics(char *device_id);
-
+  void formMqttTopics(char *client_id);
+  bool extractMqttServerAndDeviceDetails(const string &mqttUserName);
 public:
   inline ZohoIOTClient()
   {
@@ -101,7 +103,7 @@ public:
     _mqtt_client = client;
   }
   inline ~ZohoIOTClient() {}
-  int init(char *device_id, char *device_token);
+  int init(char *mqttUserName, char *mqttPassword);
   int connect();
   int publish(char *message);
   int dispatch();

@@ -4,8 +4,8 @@
 #define ssid "Zoho-Guest"
 #define password ""
 
-#define DEVICE_ID (char *)"dev13mar_2"
-#define DEVICE_TOKEN (char *)"secret"
+#define MQTT_USERNAME (char *)"/domain_name/v1/devices/client_id/connect"
+#define MQTT_PASSWORD (char *)"device_token"
 
 WiFiClient espClient;
 ZohoIOTClient zc;
@@ -45,7 +45,7 @@ void setup()
     delay(5000);
     setup_wifi();
     delay(5000);
-    zc.init(DEVICE_ID, DEVICE_TOKEN);
+    zc.init(MQTT_USERNAME, MQTT_PASSWORD);
     zc.connect();
     Serial.println("Ready!");
 }
