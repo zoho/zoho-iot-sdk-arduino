@@ -39,3 +39,4 @@ bool PubSubClient::loop()
 {
     return true;
 }
+void PubSubClient::disconnect(){}

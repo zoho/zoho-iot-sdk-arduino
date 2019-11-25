@@ -4,11 +4,11 @@
 #define ssid "Zoho-Guest"
 #define password ""
 
-#define DEVICE_ID (char *)"dev13mar_2"
-#define DEVICE_TOKEN (char *)"secret"
+#define MQTT_USERNAME (char *)"/domain_name/v1/devices/client_id/connect"
+#define MQTT_PASSWORD (char *)"mqtt_pwd"
 
-WiFiClient espClient;
-ZohoIOTClient zc(espClient);
+WiFiClientSecure espClient;
+ZohoIOTClient zc(&espClient,false);
 
 void setup_wifi()
 {
@@ -24,6 +24,8 @@ void setup_wifi()
     Serial.println(ssid);
 
     WiFi.mode(WIFI_STA);
+    WiFi.disconnect(true);
+    WiFi.persistent(false);
     WiFi.begin(ssid, password);
 
     delay(10);
@@ -58,9 +60,10 @@ void setup()
     Serial.begin(115200);
     Serial.println("Booting Up!");
     setup_wifi();
-    zc.init(DEVICE_ID, DEVICE_TOKEN);
+    zc.init(MQTT_USERNAME, MQTT_PASSWORD);
     zc.connect();
-    zc.subscribe("test_topic9876", on_message);
+    char *sub_topic = strcat(strcat("/devices/", "client_id"), "/command");
+    zc.subscribe(sub_topic,on_message);
     Serial.println("Ready!");
 }
 
@@ -69,9 +72,12 @@ void loop()
     //Watchdog for Wifi & MQTT connection status.
     //Automatically reconnect in case of connection failure.
     setup_wifi();
-    zc.connect();
+    //Serial.printf("Connection status ");
+    //Serial.println(zc.connect());
     zc.addDataPointNumber("temp", rand());
-    zc.dispatch();
-    zc.yield();
+    //zc.addDataPointNumber("current", rand() / 300);
+    //Serial.print("dispatch:");
+    //Serial.println(zc.dispatch());
+    zc.zyield();
     delay(1000);
 }
