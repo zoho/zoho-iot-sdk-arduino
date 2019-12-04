@@ -9,7 +9,6 @@
 #include <vector>
 #define topic_prefix "/devices/"
 #define telemetry "/telemetry"
-#define command "/commands"
 using namespace std;
 
 class ZohoIOTClient
@@ -64,7 +63,7 @@ private:
   int _port;
   char *_publish_topic, *_command_topic;
   const unsigned int _retry_limit = 5;
-
+  unsigned int retryCount = 0;
   std::map<string, data> dataPointsMap;
 
   template <typename T>
@@ -87,26 +86,22 @@ private:
     }
     return true;
   }
-
-protected:
-  void formMqttTopics(char *clientID);
+  inline void setPort(bool isTLSEnabled)
+  {
+    _port = isTLSEnabled ? 8883 : 1883;
+  }
+  void formMqttPublishTopic(char *clientID);
   bool extractMqttServerAndDeviceDetails(const string &mqttUserName);
 public:
   inline ZohoIOTClient(Client *client, bool isTLSEnabled)
   {
     _mqtt_client = new PubSubClient(*client);
-    if (isTLSEnabled)
-    {
-      _port = 8883;
-    }
-    else
-    {
-      _port = 1883;
-    }
+    setPort(isTLSEnabled);
   }
-  inline ZohoIOTClient(PubSubClient *pubSubClient)
+  inline ZohoIOTClient(PubSubClient *pubSubClient, bool isTLSEnabled)
   {
     _mqtt_client = pubSubClient;
+    setPort(isTLSEnabled);
   }
   inline ~ZohoIOTClient() {}
   int init(char *mqttUserName, char *mqttPassword);

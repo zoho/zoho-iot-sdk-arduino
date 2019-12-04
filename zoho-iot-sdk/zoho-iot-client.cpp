@@ -1,15 +1,11 @@
 #include "zoho-iot-client.h"
 
-unsigned int retryCount = 0;
-void ZohoIOTClient::formMqttTopics(char *client_id)
+void ZohoIOTClient::formMqttPublishTopic(char *client_id)
 {
     //TODO: To find alternative for new operator for string concatenation.
     int publish_topic_size = strlen(topic_prefix) + strlen(client_id) + strlen(telemetry) + 1;
-    int command_topic_size = strlen(topic_prefix) + strlen(client_id) + strlen(command) + 1;
     _publish_topic = new char[publish_topic_size];
-    _command_topic = new char[command_topic_size];
     snprintf(_publish_topic, publish_topic_size, "%s%s%s", topic_prefix, client_id, telemetry);
-    snprintf(_command_topic, command_topic_size, "%s%s%s", topic_prefix, client_id, command);
 }
 
 bool ZohoIOTClient::extractMqttServerAndDeviceDetails(const string &mqttUserName)
@@ -32,7 +28,6 @@ bool ZohoIOTClient::extractMqttServerAndDeviceDetails(const string &mqttUserName
     return true;
 }
 
-
 int ZohoIOTClient::init(char *mqttUserName, char *mqttPassword)
 {
     if (mqttUserName == NULL || mqttPassword == NULL)
@@ -49,7 +44,7 @@ int ZohoIOTClient::init(char *mqttUserName, char *mqttPassword)
         return FAILURE;
     }
     _mqtt_client->setServer(_mqtt_server, _port);
-    formMqttTopics(_client_id);
+    formMqttPublishTopic(_client_id);
     return SUCCESS;
 }
 
@@ -121,21 +116,21 @@ int ZohoIOTClient::connect()
 {
     //TODO: Empty validation
     //TODO: resubscribe old subscriptions if reconnecting.
-
-    if (_mqtt_client->connected())
+    bool connectionState = _mqtt_client->connected();
+    if (connectionState)
     {
         //Already having an active connecting with HUB... No job to do here..
         return SUCCESS;
     }
     // Serial.println("Connecting..");
-    while (!_mqtt_client->connected())
+    while (!connectionState)
     {
-        _mqtt_client->connect(_client_id, _mqtt_user_name, _mqtt_password);
+        connectionState = _mqtt_client->connect(_client_id, _mqtt_user_name, _mqtt_password);
         if (retryCount > _retry_limit)
         {
             break;
         }
-        if (_mqtt_client->connected())
+        if (connectionState)
         {
             retryCount = 0;
             return SUCCESS;
@@ -148,8 +143,8 @@ int ZohoIOTClient::connect()
             // Serial.print(_mqtt_client.state());
             // Serial.println(" Retry in 5 seconds");
             delay(5000);
+            retryCount++;
         }
-        retryCount++;
     }
     return CONNECTION_ERROR;
 }
