@@ -1,18 +1,11 @@
 #ifndef ZOHO_IOT_CLIENT_H_
 #define ZOHO_IOT_CLIENT_H_
-
+//#include <Arduino.h>
 #include <stdlib.h>
 #include <ArduinoJson.h>
-#include <AsyncMqttClient.h>
+#include <PubSubClient.h>
 #include <map>
 #include <iostream>
-#include <cstring>
-#include <vector>
-
-#define topic_prefix "/devices/"
-#define telemetry "/telemetry"
-#define command "/commands"
-
 using namespace std;
 
 class ZohoIOTClient
@@ -59,16 +52,16 @@ private:
     }
   } data;
 
-  AsyncMqttClient *_mqtt_client;
-  char *_mqtt_user_name;
-  char *_mqtt_password;
-  char *_client_id;
-  char *_mqtt_server;
-  int _port = 1883;
-  char *_publish_topic, *_command_topic;
+  PubSubClient *_mqtt_client;
+  char *_device_id;
+  char *_device_token;
+  // const char *_mqtt_server = "172.22.138.253"; //Shahul IP
+  const char *_mqtt_server = "172.22.142.33"; //kishan IP
+  const unsigned int _port = 1883;
+  const char *_publish_topic = "test_topic9876";
   const unsigned int _retry_limit = 5;
 
-  std::map<string, data> dataPointsMap;
+  std::map<std::string, data> dataPointsMap;
 
   template <typename T>
   inline bool addDataPoint(const char key[], value_types type, T val)
@@ -84,31 +77,31 @@ private:
     }
     else
     {
-      //Serial.println("Error: Unsupported data type.");
+      // Serial.println("Error: Unsupported data type.");
+      // TRACE("Error: Unsupported data type.");
       return false;
     }
     return true;
   }
 
-protected:
-  void formMqttTopics(char *client_id);
-  bool extractMqttServerAndDeviceDetails(const string &mqttUserName);
 public:
-  inline ZohoIOTClient()
+  inline ZohoIOTClient() {}
+  inline ZohoIOTClient(PubSubClient &client) : _mqtt_client(&client) {}
+  inline ZohoIOTClient(Client &client)
   {
-    _mqtt_client = new AsyncMqttClient();
-  }
-  inline ZohoIOTClient(AsyncMqttClient *client)
-  {
-    _mqtt_client = client;
+    _mqtt_client->setClient(client);
   }
   inline ~ZohoIOTClient() {}
-  int init(char *mqttUserName, char *mqttPassword);
+  int init(char *device_id, char *device_token);
   int connect();
-  int publish(char *message);
   int dispatch();
-  int subscribe(char *topic);
-  int disconnect();
+  int publish(char *message);
+  int subscribe(char *topic, MQTT_CALLBACK_SIGNATURE);
+  inline void zyield()
+  {
+    _mqtt_client->loop();
+  }
+
   inline bool addDataPointNumber(const char *key, int value)
   {
     return addDataPoint(key, TYPE_INT, value);
@@ -134,4 +127,5 @@ public:
     return addDataPoint(key, TYPE_CHAR, value.c_str());
   }
 };
+
 #endif

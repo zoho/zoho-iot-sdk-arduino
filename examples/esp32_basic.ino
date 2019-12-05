@@ -1,14 +1,15 @@
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
 #include <zoho-iot-client.h>
 
 #define ssid "Zoho-Guest"
 #define password ""
 
-#define MQTT_USERNAME (char *)"/domain_name/v1/devices/client_id/connect"
-#define MQTT_PASSWORD (char *)"device_token"
+#define DEVICE_ID (char *)"dev13mar_2"
+#define DEVICE_TOKEN (char *)"secret"
 
 WiFiClient espClient;
-ZohoIOTClient zc;
+ZohoIOTClient zc(espClient);
+
 void setup_wifi()
 {
     if (WiFi.status() == WL_CONNECTED)
@@ -38,25 +39,39 @@ void setup_wifi()
     Serial.println(WiFi.localIP());
 }
 
+void on_message(char *topic, byte *payload, unsigned int length)
+{
+    String msg = "";
+    for (unsigned int itr = 0; itr < length; itr++)
+    {
+        msg += (char)payload[itr];
+    }
+    Serial.print("[ ");
+    Serial.print(topic);
+    Serial.print(" ] : ");
+    Serial.print(msg);
+    Serial.println();
+}
+
 void setup()
 {
     Serial.begin(115200);
     Serial.println("Booting Up!");
-    delay(5000);
     setup_wifi();
-    delay(5000);
-    zc.init(MQTT_USERNAME, MQTT_PASSWORD);
+    zc.init(DEVICE_ID, DEVICE_TOKEN);
     zc.connect();
+    zc.subscribe("test_topic9876", on_message);
     Serial.println("Ready!");
 }
 
 void loop()
 {
+    //Watchdog for Wifi & MQTT connection status.
+    //Automatically reconnect in case of connection failure.
     setup_wifi();
-    Serial.printf("Connection status ");
-    Serial.println(zc.connect());
-    zc.addDataPointNumber("voltage", rand()/100);
-    zc.addDataPointNumber("current", rand()/300);
+    zc.connect();
+    zc.addDataPointNumber("temp", rand());
     zc.dispatch();
-    delay(2000);
+    zc.yield();
+    delay(1000);
 }
