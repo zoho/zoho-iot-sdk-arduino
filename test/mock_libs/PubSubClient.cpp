@@ -1,5 +1,6 @@
 #include "PubSubClient.h"
-
+PubSubClient::PubSubClient() {}
+PubSubClient::PubSubClient(Client &client) {}
 bool PubSubClient::connect(const char *id, const char *user, const char *pass)
 {
     return true;
@@ -12,7 +13,8 @@ PubSubClient &PubSubClient::setServer(const char *domain, uint16_t port)
 {
     return *this;
 }
-PubSubClient &PubSubClient::setClient(Client& client){
+PubSubClient &PubSubClient::setClient(Client &client)
+{
     return *this;
 }
 bool PubSubClient::connected()
@@ -39,3 +41,4 @@ bool PubSubClient::loop()
 {
     return true;
 }
+void PubSubClient::disconnect() {}

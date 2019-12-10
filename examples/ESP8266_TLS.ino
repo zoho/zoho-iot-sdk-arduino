@@ -1,15 +1,30 @@
-#include <WiFi.h>
+#include <ESP8266WiFi.h>
 #include <zoho-iot-client.h>
 
 #define ssid "Wifi_ssid"
 #define password "Wifi_password"
 
+WiFiClientSecure espClient;
+ZohoIOTClient zc(&espClient, true);
+const char fingerPrint[] = "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD";
 #define MQTT_USERNAME (char *)"/mqtt_domain_name/v1/devices/client_id/connect"
 #define MQTT_PASSWORD (char *)"mqtt_password"
-
-WiFiClientSecure espClient;
-ZohoIOTClient zc(&espClient, false);
 const long interval = 1000;
+void on_message(char *topic, byte *payload, unsigned int length)
+{
+    Serial.println("new message recieved");
+    String msg = "";
+    for (unsigned int itr = 0; itr < length; itr++)
+    {
+        msg += (char)payload[itr];
+    }
+    Serial.print("[ ");
+    Serial.print(topic);
+    Serial.print(" ] : ");
+    Serial.print(msg);
+    Serial.println();
+}
+
 void setup_wifi()
 {
     if (WiFi.status() == WL_CONNECTED)
@@ -22,7 +37,6 @@ void setup_wifi()
     Serial.println();
     Serial.print("Connecting to ");
     Serial.println(ssid);
-
     WiFi.mode(WIFI_STA);
     WiFi.disconnect(true);
     WiFi.persistent(false);
@@ -41,26 +55,13 @@ void setup_wifi()
     Serial.println(WiFi.localIP());
 }
 
-void on_message(char *topic, byte *payload, unsigned int length)
-{
-    Serial.println("new message recieved");
-    String msg = "";
-    for (unsigned int itr = 0; itr < length; itr++)
-    {
-        msg += (char)payload[itr];
-    }
-    Serial.print("[ ");
-    Serial.print(topic);
-    Serial.print(" ] : ");
-    Serial.print(msg);
-    Serial.println();
-}
-
 void setup()
 {
     Serial.begin(115200);
     Serial.println("Booting Up!");
+    delay(5000);
     setup_wifi();
+    espClient.setFingerprint(fingerPrint);
     zc.init(MQTT_USERNAME, MQTT_PASSWORD);
     zc.connect();
     char *sub_topic = strcat(strcat("/devices/", "client_id"), "/commands");

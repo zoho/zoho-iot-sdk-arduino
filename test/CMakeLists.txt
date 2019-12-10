@@ -27,7 +27,7 @@ target_include_directories (unit_tests
 )
 
 list(   APPEND paho_srcs 
-        "${PROJECT_SOURCE_DIR}/mock_libs/PubSubClient.cpp" 
+        "${PROJECT_SOURCE_DIR}/mock_libs/PubSubClient.cpp"
         "${PROJECT_SOURCE_DIR}/mock_libs/PubSubClient.h" )
 
 ADD_LIBRARY(pubsub_lib STATIC ${paho_srcs})
