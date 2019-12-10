@@ -10,6 +10,7 @@
 
 WiFiClientSecure espClient;
 ZohoIOTClient zc(&espClient, true);
+const long interval = 2000;
 // To securely connect with finger print verification , uncomment finger print and comment CA certificate.
 // const char fingerPrint[] ="AA BB CC DD EE FF 00 11 22 33 44 55 66 77 88 99 AA BB CC DD";
 const char *local_root_ca = "-----BEGIN CERTIFICATE-----\n"
@@ -50,6 +51,7 @@ const char *local_root_ca = "-----BEGIN CERTIFICATE-----\n"
 
 void on_message(char *topic, byte *payload, unsigned int length)
 {
+    Serial.println("new message recieved");
     String msg = "";
     for (unsigned int itr = 0; itr < length; itr++)
     {
@@ -107,17 +109,21 @@ void setup()
     Serial.println("Ready!");
 }
 
+unsigned long prev_time = 0, current_time = 0;
 void loop()
 {
     //Watchdog for Wifi & MQTT connection status.
     //Automatically reconnect in case of connection failure.
     setup_wifi();
-    Serial.printf("Connection status ");
-    Serial.println(zc.connect());
-    zc.addDataPointNumber("temp", rand());
-    zc.addDataPointNumber("current", rand() / 300);
-    Serial.print("dispatch:");
-    Serial.println(zc.dispatch());
+    zc.connect();
+    if ((current_time = millis()) - prev_time >= interval)
+    {
+        prev_time = current_time;
+        zc.addDataPointNumber("voltage", rand() / 100);
+        zc.addDataPointNumber("current", rand() / 300);
+        Serial.print("dispatch:");
+        Serial.println(zc.dispatch());
+        Serial.println(millis());
+    }
     zc.zyield();
-    delay(500);
 }

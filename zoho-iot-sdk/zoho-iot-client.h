@@ -34,6 +34,16 @@ private:
     CONNECTION_ERROR = -2
   } transactionStatus;
 
+  typedef enum
+  {
+    NOT_INITIALIZED,
+    INITIALIZED,
+    CONNECTED,
+    RETRYING,
+    CONNECTION_LOST,
+    DISCONNECTED
+  } clientState;
+
   typedef struct data
   {
     value_types type;
@@ -63,6 +73,7 @@ private:
   int _port;
   char *_publish_topic, *_command_topic;
   const unsigned int _retry_limit = 5;
+  clientState currentState;
   unsigned int retryCount = 0;
   std::map<string, data> dataPointsMap;
 
@@ -92,16 +103,19 @@ private:
   }
   void formMqttPublishTopic(char *clientID);
   bool extractMqttServerAndDeviceDetails(const string &mqttUserName);
+
 public:
   inline ZohoIOTClient(Client *client, bool isTLSEnabled)
   {
     _mqtt_client = new PubSubClient(*client);
     setPort(isTLSEnabled);
+    currentState = NOT_INITIALIZED;
   }
   inline ZohoIOTClient(PubSubClient *pubSubClient, bool isTLSEnabled)
   {
     _mqtt_client = pubSubClient;
     setPort(isTLSEnabled);
+    currentState = NOT_INITIALIZED;
   }
   inline ~ZohoIOTClient() {}
   int init(char *mqttUserName, char *mqttPassword);

@@ -9,7 +9,7 @@
 
 WiFiClientSecure espClient;
 ZohoIOTClient zc(&espClient, false);
-
+const long interval = 1000;
 void setup_wifi()
 {
     if (WiFi.status() == WL_CONNECTED)
@@ -43,6 +43,7 @@ void setup_wifi()
 
 void on_message(char *topic, byte *payload, unsigned int length)
 {
+    Serial.println("new message recieved");
     String msg = "";
     for (unsigned int itr = 0; itr < length; itr++)
     {
@@ -67,17 +68,21 @@ void setup()
     Serial.println("Ready!");
 }
 
+unsigned long prev_time = 0, current_time = 0;
 void loop()
 {
     //Watchdog for Wifi & MQTT connection status.
     //Automatically reconnect in case of connection failure.
     setup_wifi();
-    Serial.printf("Connection status ");
-    Serial.println(zc.connect());
-    zc.addDataPointNumber("temp", rand());
-    zc.addDataPointNumber("current", rand() / 300);
-    Serial.print("dispatch:");
-    Serial.println(zc.dispatch());
+    zc.connect();
+    if ((current_time = millis()) - prev_time >= interval)
+    {
+        prev_time = current_time;
+        zc.addDataPointNumber("voltage", rand() / 100);
+        zc.addDataPointNumber("current", rand() / 300);
+        Serial.print("dispatch:");
+        Serial.println(zc.dispatch());
+        Serial.println(millis());
+    }
     zc.zyield();
-    delay(500);
 }

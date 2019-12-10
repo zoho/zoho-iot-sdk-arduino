@@ -9,9 +9,10 @@ ZohoIOTClient zc(&espClient, true);
 const char fingerPrint[] = "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD";
 #define MQTT_USERNAME (char *)"/mqtt_domain_name/v1/devices/client_id/connect"
 #define MQTT_PASSWORD (char *)"mqtt_password"
-
+const long interval = 1000;
 void on_message(char *topic, byte *payload, unsigned int length)
 {
+    Serial.println("new message recieved");
     String msg = "";
     for (unsigned int itr = 0; itr < length; itr++)
     {
@@ -68,17 +69,21 @@ void setup()
     Serial.println("Ready!");
 }
 
+unsigned long prev_time = 0, current_time = 0;
 void loop()
 {
     //Watchdog for Wifi & MQTT connection status.
     //Automatically reconnect in case of connection failure.
     setup_wifi();
-    Serial.printf("Connection status ");
-    Serial.println(zc.connect());
-    zc.addDataPointNumber("voltage", rand() / 100);
-    zc.addDataPointNumber("current", rand() / 300);
-    Serial.print("dispatch:");
-    Serial.println(zc.dispatch());
+    zc.connect();
+    if ((current_time = millis()) - prev_time >= interval)
+    {
+        prev_time = current_time;
+        zc.addDataPointNumber("voltage", rand() / 100);
+        zc.addDataPointNumber("current", rand() / 300);
+        Serial.print("dispatch:");
+        Serial.println(zc.dispatch());
+        Serial.println(millis());
+    }
     zc.zyield();
-    delay(2000);
 }

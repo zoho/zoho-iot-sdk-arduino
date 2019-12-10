@@ -45,13 +45,23 @@ int ZohoIOTClient::init(char *mqttUserName, char *mqttPassword)
     }
     _mqtt_client->setServer(_mqtt_server, _port);
     formMqttPublishTopic(_client_id);
+    currentState = INITIALIZED;
     return SUCCESS;
 }
 
 int ZohoIOTClient::publish(char *message)
 {
-    if (_mqtt_client->connected() != true || message == NULL)
+    if (currentState != CONNECTED)
     {
+        return CONNECTION_ERROR;
+    }
+    if (message == NULL)
+    {
+        return FAILURE;
+    }
+    if (!_mqtt_client->connected())
+    {
+        currentState = CONNECTION_LOST;
         return FAILURE;
     }
     //TODO: Empty validation
@@ -68,6 +78,10 @@ int ZohoIOTClient::publish(char *message)
 int ZohoIOTClient::dispatch()
 {
     //Form json payload and publish to HUB...
+    if (currentState != CONNECTED)
+    {
+        return CONNECTION_ERROR;
+    }
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
     root["device_id"] = _client_id;
@@ -116,23 +130,30 @@ int ZohoIOTClient::connect()
 {
     //TODO: Empty validation
     //TODO: resubscribe old subscriptions if reconnecting.
-    bool connectionState = _mqtt_client->connected();
-    if (connectionState)
+    if (currentState < INITIALIZED)
+    {
+        return CONNECTION_ERROR;
+    }
+    // bool connectionState = _mqtt_client->connected();
+    if (_mqtt_client->connected())
     {
         //Already having an active connecting with HUB... No job to do here..
+        currentState = CONNECTED;
         return SUCCESS;
     }
     // Serial.println("Connecting..");
-    while (!connectionState)
+    while (!_mqtt_client->connected())
     {
-        connectionState = _mqtt_client->connect(_client_id, _mqtt_user_name, _mqtt_password);
+        _mqtt_client->connect(_client_id, _mqtt_user_name, _mqtt_password);
         if (retryCount > _retry_limit)
         {
+            currentState = RETRYING;
             break;
         }
-        if (connectionState)
+        if (_mqtt_client->connected())
         {
             retryCount = 0;
+            currentState = CONNECTED;
             return SUCCESS;
         }
         else
@@ -143,6 +164,7 @@ int ZohoIOTClient::connect()
             // Serial.print(_mqtt_client.state());
             // Serial.println(" Retry in 5 seconds");
             delay(5000);
+            currentState = RETRYING;
             retryCount++;
         }
     }
@@ -153,8 +175,18 @@ int ZohoIOTClient::subscribe(char *topic, MQTT_CALLBACK_SIGNATURE)
 {
     //Subscribe to topic and set method to be called message on that topic.
     //TODO: Empty validation
-    if (topic == NULL || !_mqtt_client->connected())
+    if (currentState != CONNECTED)
     {
+        return CONNECTION_ERROR;
+    }
+
+    if (topic == NULL)
+    {
+        return FAILURE;
+    }
+    if (!_mqtt_client->connected())
+    {
+        currentState = CONNECTION_LOST;
         return FAILURE;
     }
     _mqtt_client->setCallback(callback);
