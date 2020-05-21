@@ -1,5 +1,5 @@
 #include "zoho-iot-client.h"
-
+char connectionStringBuff[256] = "";
 void ZohoIOTClient::formMqttPublishTopic(char *client_id)
 {
     //TODO: To find alternative for new operator for string concatenation.
@@ -125,6 +125,20 @@ int ZohoIOTClient::dispatch()
 
     return publish(payloadMsg);
 }
+void ZohoIOTClient::addConnectionParameter(char *connectionParamKey, char *connectionParamValue)
+{
+    sprintf(connectionStringBuff, "%s%s%s%s%s", connectionStringBuff, connectionParamKey, "=", connectionParamValue, "&");
+}
+
+char *ZohoIOTClient::formConnectionString(char *username)
+{
+    sprintf(connectionStringBuff, "%s%s", username, "?");
+    addConnectionParameter("sdk_name", sdk_name);
+    addConnectionParameter("sdk_version", sdk_version);
+    // addConnectionParameter("sdk_url", sdk_url);
+    connectionStringBuff[strlen(connectionStringBuff) - 1] = '\0';
+    return connectionStringBuff;
+}
 
 int ZohoIOTClient::connect()
 {
@@ -144,7 +158,7 @@ int ZohoIOTClient::connect()
     // Serial.println("Connecting..");
     while (!_mqtt_client->connected())
     {
-        _mqtt_client->connect(_client_id, _mqtt_user_name, _mqtt_password);
+        _mqtt_client->connect(_client_id, formConnectionString(_mqtt_user_name), _mqtt_password);
         if (retryCount > _retry_limit)
         {
             currentState = RETRYING;

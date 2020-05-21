@@ -7,8 +7,14 @@
 #include <map>
 #include <cstring>
 #include <vector>
+
 #define topic_prefix "/devices/"
 #define telemetry "/telemetry"
+
+#define sdk_name "zoho-iot-sdk-c"
+#define sdk_version "0.0.1"
+#define sdk_url ""
+
 using namespace std;
 
 class ZohoIOTClient
@@ -103,6 +109,7 @@ private:
   }
   void formMqttPublishTopic(char *clientID);
   bool extractMqttServerAndDeviceDetails(const string &mqttUserName);
+  char *formConnectionString(char *username);
 
 public:
   inline ZohoIOTClient(Client *client, bool isTLSEnabled)
@@ -119,6 +126,7 @@ public:
   }
   inline ~ZohoIOTClient() {}
   int init(char *mqttUserName, char *mqttPassword);
+  void addConnectionParameter(char *connectionParamKey, char *connectionParamValue);
   int connect();
   int publish(char *message);
   int dispatch();
