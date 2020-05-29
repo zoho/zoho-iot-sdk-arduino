@@ -82,40 +82,6 @@ int ZohoIOTClient::dispatch()
     {
         return CONNECTION_ERROR;
     }
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["device_id"] = _client_id;
-    JsonObject &dataObj = root.createNestedObject("data");
-
-    std::map<string, data>::iterator it = dataPointsMap.begin();
-    while (it != dataPointsMap.end())
-    {
-        data value = it->second;
-        switch (value.type)
-        {
-        case TYPE_INT:
-        {
-            dataObj[it->first.c_str()] = value.val.i_val;
-            break;
-        }
-        case TYPE_DOUBLE:
-        {
-            dataObj[it->first.c_str()] = value.val.d_val;
-            break;
-        }
-        case TYPE_CHAR:
-        {
-            dataObj[it->first.c_str()] = value.val.s_val;
-            break;
-        }
-        default:
-        {
-            return FAILURE;
-        }
-        }
-        it++;
-    }
-    dataPointsMap.clear();
     int size = root.measureLength() + 1;
     char payloadMsg[size];
     root.printTo(payloadMsg, size);

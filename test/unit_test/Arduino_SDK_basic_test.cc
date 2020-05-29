@@ -71,7 +71,7 @@ TEST_CASE("Connect")
     // Connect with new connection return success.
     Mock<PubSubClient> mock;
     fakeit::When(OverloadedMethod(mock, setServer, PubSubClient & (const char *, uint16_t))).AlwaysReturn(*pub_client);
-    fakeit::When(Method(mock, connected)).Return(2_Times(false),true);
+    fakeit::When(Method(mock, connected)).Return(2_Times(false), true);
     fakeit::When(OverloadedMethod(mock, connect, bool(const char *, const char *, const char *))).AlwaysReturn(true);
     auto &client = mock.get();
     ZohoIOTClient zc(&client, false);
@@ -83,7 +83,7 @@ TEST_CASE("Connect")
     // Connect should return success with retried connection.
     Mock<PubSubClient> mock;
     fakeit::When(OverloadedMethod(mock, setServer, PubSubClient & (const char *, uint16_t))).AlwaysReturn(*pub_client);
-    fakeit::When(Method(mock, connected)).Return(4_Times(false),true);
+    fakeit::When(Method(mock, connected)).Return(4_Times(false), true);
     fakeit::When(OverloadedMethod(mock, connect, bool(const char *, const char *, const char *))).AlwaysReturn(true);
     auto &client = mock.get();
     ZohoIOTClient zc(&client, false);
@@ -154,37 +154,66 @@ TEST_CASE("Publish")
 TEST_CASE("AddDataPointNUmber")
 {
   Mock<PubSubClient> mock;
+  auto &client = mock.get();
+  ZohoIOTClient zc(&client, false);
   SECTION("AddDataPointNumber_ShouldReturnSuccess_WhenIntegerAdded")
   {
     // Add integer data point returns success.
-    auto &client = mock.get();
-    ZohoIOTClient zc(&client, false);
     REQUIRE(zc.addDataPointNumber("key", 987) == true);
   }
   SECTION("AddDataPointNumber_ShouldReturnSuccess_WhenFloatAdded")
   {
     // Add float data point returns success.
-    Mock<PubSubClient> mock;
-    auto &client = mock.get();
-    ZohoIOTClient zc(&client, false);
     REQUIRE(zc.addDataPointNumber("key1", 0.123) == true);
   }
   SECTION("AddDataPointNumber_ShouldReturnFailure_WhenNULLKeyAdded")
   {
-    // Add data point with returns NULL key failure.
-    Mock<PubSubClient> mock;
-    auto &client = mock.get();
-    ZohoIOTClient zc(&client, false);
+    // Add data point number with NULL key returns failure.
     REQUIRE(zc.addDataPointNumber(NULL, 0.123) == false);
   }
   SECTION("AddDataPointNumber_ShouldReturnSuccess_WhenSameKeyAdded")
   {
-    // Add data point with same key return success.
-    Mock<PubSubClient> mock;
-    auto &client = mock.get();
-    ZohoIOTClient zc(&client, false);
+    // Add data point number with same key return success, i.e replace old value .
     zc.addDataPointNumber("key1", 0.123);
     REQUIRE(zc.addDataPointNumber("key1", 456) == true);
+  }
+
+  SECTION("AddDataPointNumber_ShouldReturnSuccess_WhenIntegerAddedwithNotNULLAssetName")
+  {
+    // Add integer data point returns success with Not NULL asset name.
+    REQUIRE(zc.addDataPointNumber("key", 987, "asset") == true);
+  }
+  SECTION("AddDataPointNumber_ShouldReturnSuccess_WhenFloatAddedwithNotNULLAssetName")
+  {
+    // Add float data point returns success with Not NULL asset name.
+    REQUIRE(zc.addDataPointNumber("key1", 0.123, "asset") == true);
+  }
+  SECTION("AddDataPointNumber_ShouldReturnFailure_WhenNULLKeyAddedwithNotNULLAssetName")
+  {
+    // Add data point number with NULL key returns failure with Not NULL asset name.
+    REQUIRE(zc.addDataPointNumber(NULL, 0.123, "asset") == false);
+  }
+  SECTION("AddDataPointNumber_ShouldReturnSuccess_WhenSameKeyAddedwithNotNULLAssetName")
+  {
+    // Add data point number with same key return success with Not NULL asset name, i.e replace old value .
+    zc.addDataPointNumber("key1", 0.123, "asset");
+    REQUIRE(zc.addDataPointNumber("key1", 456, "asset") == true);
+  }
+
+  SECTION("AddDataPointNumber_ShouldReturnSuccess_WhenIntegerAddedwithNULLAssetName")
+  {
+    // Add integer data point return success with NULL asset name , i.e adding int to root object.
+    REQUIRE(zc.addDataPointNumber("key", 987, NULL) == true);
+  }
+  SECTION("AddDataPointNumber_ShouldReturnSuccess_WhenIntegerAddedwithNULLAssetName")
+  {
+    // Add float/double data point return success with NULL asset name , i.e adding float/double to root object.
+    REQUIRE(zc.addDataPointNumber("key", 0.123, NULL) == true);
+  }
+  SECTION("AddDataPointNumber_ShouldReturnSuccess_WhenIntegerAddedwithEmptyAssetName")
+  {
+    // Add float/double data point return success with empty asset name , i.e adding float/double to root object.
+    REQUIRE(zc.addDataPointNumber("key", 0.123, "") == true);
   }
 }
 
@@ -205,10 +234,66 @@ TEST_CASE("AddDataPointString")
   }
   SECTION("AddDataPointString_ShouldReturnSuccess_WhenSameKeyAdded")
   {
-    // Add data point String with same key return success.
+    // Add data point String with same key return success, i.e replace old value .
     string str = "value";
     zc.addDataPointString("key1", str);
     REQUIRE(zc.addDataPointString("key1", "456") == true);
+  }
+  SECTION("AddDataPointString_ShouldReturnSuccess_WhenStringAddedwithNotNULLAssetName")
+  {
+    // Add data Point String with non-null arguments returns success with Not NULL asset name.
+    REQUIRE(zc.addDataPointString("key1", "value1", "asset1") == true);
+  }
+  SECTION("AddDataPointString_ShouldReturnFailure_WhenNULLKeyAddedwithNotNULLAssetName")
+  {
+    // Add data Point String with null arguments returns failure with Not NULL asset name
+    REQUIRE(zc.addDataPointString("key", NULL, "asset1") == false);
+  }
+  SECTION("AddDataPointString_ShouldReturnSuccess_WhenSameKeyAddedwithNotNULLAssetName")
+  {
+    // Add data point String with same key return success with Not NULL asset name, i.e replace old value .
+    string str = "value";
+    zc.addDataPointString("key1", str);
+    REQUIRE(zc.addDataPointString("key1", "456", "asset1") == true);
+  }
+  SECTION("AddDataPointString_ShouldReturnSuccess_WhenStringAddedwithNULLAssetName")
+  {
+    // Add data point String return success with NULL asset name , i.e adding string to root object.
+    REQUIRE(zc.addDataPointString("key1", "value1", NULL) == true);
+  }
+  SECTION("AddDataPointString_ShouldReturnSuccess_WhenStringAddedwithNULLAssetName")
+  {
+    // Add data point String return success with NULL asset name , i.e adding string to root object.
+    string str = "value";
+    REQUIRE(zc.addDataPointString("key1", str, NULL) == true);
+  }
+  SECTION("AddDataPointString_ShouldReturnSuccess_WhenStringAddedwithEmptyAssetName")
+  {
+    // Add data point String return success with empty asset name , i.e adding string to root object.
+    string str = "value";
+    REQUIRE(zc.addDataPointString("key1", str, "") == true);
+  }
+}
+
+TEST_CASE("markDataPointAsError")
+{
+  Mock<PubSubClient> mock;
+  auto &client = mock.get();
+  ZohoIOTClient zc(&client, false);
+  SECTION("markDataPointAsError_ShouldReturnSuccess_WhenDatapointIsMarkedAsErrorWithNoAssetName")
+  {
+    // marking DataPoint as Error with no assetName should return success when a datapoint is marked as error.
+    REQUIRE(zc.markDataPointAsError("key1") == true);
+  }
+  SECTION("markDataPointAsError_ShouldReturnSuccess_WhenDatapointIsMarkedAsErrorWithAssetName")
+  {
+    // marking DataPoint as Error with assetName should return success when a datapoint is marked as error.
+    REQUIRE(zc.markDataPointAsError("key1", "asset1") == true);
+  }
+  SECTION("markDataPointAsError_ShouldReturnSuccess_WhenDatapointIsMarkedAsErrorWithNULLAssetName")
+  {
+    // marking DataPoint as Error with Null assetName should return success , i.e marking root object's key as error.
+    REQUIRE(zc.markDataPointAsError("key1", NULL) == true);
   }
 }
 
