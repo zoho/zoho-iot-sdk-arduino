@@ -4,8 +4,11 @@ void ZohoIOTClient::formMqttPublishTopic(char *client_id)
 {
     //TODO: To find alternative for new operator for string concatenation.
     int publish_topic_size = strlen(topic_prefix) + strlen(client_id) + strlen(telemetry) + 1;
+    int event_topic_size = strlen(topic_prefix) + strlen(client_id) + strlen(event) + 1;
     _publish_topic = new char[publish_topic_size];
+    _event_topic = new char[event_topic_size];
     snprintf(_publish_topic, publish_topic_size, "%s%s%s", topic_prefix, client_id, telemetry);
+    snprintf(_event_topic, event_topic_size, "%s%s%s", topic_prefix, client_id, event);
 }
 
 bool ZohoIOTClient::extractMqttServerAndDeviceDetails(const string &mqttUserName)
@@ -47,6 +50,77 @@ int ZohoIOTClient::init(char *mqttUserName, char *mqttPassword)
     formMqttPublishTopic(_client_id);
     currentState = INITIALIZED;
     return SUCCESS;
+}
+
+int ZohoIOTClient::dispatchEventFromEventDataObject(char *eventType, char *eventDescription, char *assetName)
+{
+    int size = eventDataObject.measureLength() + 1;
+    char eventDataJSONString[size];
+    eventDataObject.printTo(eventDataJSONString, size);
+    return dispatchEventFromJSONString(eventType, eventDescription, eventDataJSONString, assetName);
+}
+
+int ZohoIOTClient::dispatchEventFromJSONString(char *eventType, char *eventDescription, char *eventDataJSONString, char *assetName)
+{
+    if (currentState != CONNECTED)
+    {
+        return CONNECTION_ERROR;
+    }
+
+    if (!_mqtt_client->connected())
+    {
+        currentState = CONNECTION_LOST;
+        return FAILURE;
+    }
+
+    if (!checkStringIsValid(eventType)|| eventDescription == NULL || !checkStringIsValid(eventDataJSONString))
+    {
+        // Serial.println("Event Type/Description or dataJsonString cant be Null or empty");
+        return FAILURE;
+    }
+
+    DynamicJsonBuffer event_dispatch_buffer, event_data_buffer;
+    JsonObject &eventObject = event_dispatch_buffer.createObject();
+    eventObject["event_type"] = eventType;
+    eventObject["event_descr"] = eventDescription;
+    JsonObject &parsed_event_Data = event_data_buffer.parseObject(eventDataJSONString);
+    if (!parsed_event_Data.success())
+    {
+        return FAILURE;
+    }
+    eventObject["event_data"] = parsed_event_Data;
+    int size;
+    bool pub_status = false;
+    if (!checkStringIsValid(assetName))
+    {
+        size = eventObject.measureLength() + 1;
+        char payloadMsg[size];
+        eventObject.printTo(payloadMsg, size);
+        pub_status = _mqtt_client->publish(_event_topic, payloadMsg);
+        eventObject.remove("event_type");
+        eventObject.remove("event_data");
+        eventObject.remove("event_descr");
+        event_data_buffer.clear();
+    }
+    else
+    {
+        JsonObject &eventDisptachObject = event_dispatch_buffer.createObject();
+        eventDisptachObject[assetName] = eventObject;
+        size = eventDisptachObject.measureLength() + 1;
+        char payloadMsg[size];
+        eventDisptachObject.printTo(payloadMsg, size);
+        pub_status = _mqtt_client->publish(_event_topic, payloadMsg);
+        eventDisptachObject.remove(assetName);
+        event_dispatch_buffer.clear();
+    }
+    if (pub_status == true)
+    {
+        return SUCCESS;
+    }
+    else
+    {
+        return FAILURE;
+    }
 }
 
 int ZohoIOTClient::publish(char *message)
@@ -99,8 +173,8 @@ void ZohoIOTClient::addConnectionParameter(char *connectionParamKey, char *conne
 char *ZohoIOTClient::formConnectionString(char *username)
 {
     sprintf(connectionStringBuff, "%s%s", username, "?");
-    addConnectionParameter("sdk_name", sdk_name);
-    addConnectionParameter("sdk_version", sdk_version);
+    addConnectionParameter((char *)"sdk_name", sdk_name);
+    addConnectionParameter((char *)"sdk_version", sdk_version);
     // addConnectionParameter("sdk_url", sdk_url);
     connectionStringBuff[strlen(connectionStringBuff) - 1] = '\0';
     return connectionStringBuff;
