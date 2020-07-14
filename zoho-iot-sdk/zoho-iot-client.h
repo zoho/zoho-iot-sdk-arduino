@@ -10,6 +10,7 @@
 
 #define topic_prefix "/devices/"
 #define telemetry "/telemetry"
+#define event "/events"
 
 #define sdk_name (char *)"zoho-iot-sdk-c"
 #define sdk_version (char *)"0.0.1"
@@ -27,7 +28,8 @@ private:
     TYPE_CHAR
   } value_types;
 
-  typedef union {
+  typedef union
+  {
     int i_val;
     double d_val;
     const char *s_val;
@@ -50,55 +52,28 @@ private:
     DISCONNECTED
   } clientState;
 
-  typedef struct data
-  {
-    value_types type;
-    value val;
-    data(value_types datatype, int value)
-    {
-      type = datatype;
-      val.i_val = value;
-    }
-    data(value_types datatype, double value)
-    {
-      type = datatype;
-      val.d_val = value;
-    }
-    data(value_types datatype, const char *value)
-    {
-      type = datatype;
-      val.s_val = value;
-    }
-  } data;
-
   PubSubClient *_mqtt_client;
   char *_mqtt_user_name;
   char *_mqtt_password;
   char *_client_id;
   char *_mqtt_server;
   int _port;
-  char *_publish_topic, *_command_topic;
+  char *_publish_topic, *_command_topic, *_event_topic;
   const unsigned int _retry_limit = 5;
   clientState currentState;
   unsigned int retryCount = 0;
 
   DynamicJsonBuffer jsonBuffer;
   JsonObject &root = jsonBuffer.createObject();
-
+  JsonObject &eventDataObject = jsonBuffer.createObject();
   template <typename T>
-  inline bool addDataPoint(const char *key, value_types type, T val, const char *assetName)
+  inline bool addDataPoint(const char *key, T val, const char *assetName)
   {
     if (key == NULL)
     {
       return false;
     }
-    if (type != TYPE_INT && type != TYPE_CHAR && type != TYPE_DOUBLE)
-    {
-      // Serial.println("Error: Unsupported data type.");
-      // TRACE("Error: Unsupported data type.");
-      return false;
-    }
-    if (assetName != NULL && assetName != "")
+    if (checkStringIsValid(assetName))
     {
       if (!root.containsKey(assetName))
       {
@@ -113,6 +88,19 @@ private:
     }
     return true;
   }
+
+  template <typename T>
+  inline bool addEventDataPoint(const char *key, T val)
+  {
+    if (key == NULL || strcmp(key, "") == 0)
+    {
+      // Serial.println("Cant add Null/empty keys");
+      return false;
+    }
+    eventDataObject[key] = val;
+    return true;
+  }
+
   inline void setPort(bool isTLSEnabled)
   {
     _port = isTLSEnabled ? 8883 : 1883;
@@ -120,6 +108,10 @@ private:
   void formMqttPublishTopic(char *clientID);
   bool extractMqttServerAndDeviceDetails(const string &mqttUserName);
   char *formConnectionString(char *username);
+  inline bool checkStringIsValid(const char *value)
+  {
+    return (value == NULL || strcmp(value, "") == 0) ? false : true;
+  }
 
 public:
   inline ZohoIOTClient(Client *client, bool isTLSEnabled)
@@ -140,6 +132,8 @@ public:
   int connect();
   int publish(char *message);
   int dispatch();
+  int dispatchEventFromJSONString(char *eventType, char *eventDescription, char *eventDataJSONString, char *assetName);
+  int dispatchEventFromEventDataObject(char *eventType, char *eventDescription, char *assetName);
   int subscribe(char *topic, MQTT_CALLBACK_SIGNATURE);
   int disconnect();
   inline void zyield()
@@ -147,70 +141,57 @@ public:
     _mqtt_client->loop();
   }
 
-  // Adding Integer
-  inline bool addDataPointNumber(const char *key, int value, const char *assetName)
+  inline bool addEventDataPointNumber(const char *key, double value)
   {
-    return addDataPoint(key, TYPE_INT, value, assetName);
+    return addEventDataPoint(key, value);
   }
-  inline bool addDataPointNumber(const char *key, int value)
+  inline bool addEventDataPointString(const char *key, char *value)
   {
-    return addDataPoint(key, TYPE_INT, value, NULL);
+    return checkStringIsValid(value) ? addEventDataPoint(key, value) : false;
+  }
+  inline bool addEventDataPointString(const char *key, string value)
+  {
+    return (value.empty() == true) ? false : addEventDataPoint(key, value.c_str());
   }
 
   // Adding Double
   inline bool addDataPointNumber(const char *key, double value)
   {
-    return addDataPoint(key, TYPE_DOUBLE, value, NULL);
+    return addDataPoint(key, value, NULL);
   }
   inline bool addDataPointNumber(const char *key, double value, const char *assetName)
   {
-    return addDataPoint(key, TYPE_DOUBLE, value, assetName);
+    return addDataPoint(key, value, assetName);
   }
 
   // Adding Char*
   inline bool addDataPointString(const char *key, const char *value)
   {
-    if (value == NULL)
-    {
-      return false;
-    }
-    return addDataPoint(key, TYPE_CHAR, value, NULL);
+    return (value == NULL) ? false : addDataPoint(key, value, NULL);
   }
   inline bool addDataPointString(const char *key, const char *value, const char *assetName)
   {
-    if (value == NULL)
-    {
-      return false;
-    }
-    return addDataPoint(key, TYPE_CHAR, value, assetName);
+    return (value == NULL) ? false : addDataPoint(key, value, assetName);
   }
 
   // Adding String
   inline bool addDataPointString(const char *key, string value)
   {
-    if (value.empty())
-    {
-      return false;
-    }
-    return addDataPoint(key, TYPE_CHAR, value.c_str(), NULL);
+    return (value.empty() == true) ? false : addDataPoint(key, value.c_str(), NULL);
   }
   inline bool addDataPointString(const char *key, string value, const char *assetName)
   {
-    if (value.empty())
-    {
-      return false;
-    }
-    return addDataPoint(key, TYPE_CHAR, value.c_str(), assetName);
+    return (value.empty() == true) ? false : addDataPoint(key, value.c_str(), assetName);
   }
 
   // Adding Error
   inline bool markDataPointAsError(const char *key)
   {
-    return addDataPoint(key, TYPE_CHAR, "<ERROR>", NULL);
+    return addDataPoint(key, "<ERROR>", NULL);
   }
   inline bool markDataPointAsError(const char *key, const char *assetName)
   {
-    return addDataPoint(key, TYPE_CHAR, "<ERROR>", assetName);
+    return addDataPoint(key, "<ERROR>", assetName);
   }
 };
 #endif

@@ -205,12 +205,12 @@ TEST_CASE("AddDataPointNUmber")
     // Add integer data point return success with NULL asset name , i.e adding int to root object.
     REQUIRE(zc.addDataPointNumber("key", 987, NULL) == true);
   }
-  SECTION("AddDataPointNumber_ShouldReturnSuccess_WhenIntegerAddedwithNULLAssetName")
+  SECTION("AddDataPointNumber_ShouldReturnSuccess_WhenFloatAddedwithNULLAssetName")
   {
     // Add float/double data point return success with NULL asset name , i.e adding float/double to root object.
     REQUIRE(zc.addDataPointNumber("key", 0.123, NULL) == true);
   }
-  SECTION("AddDataPointNumber_ShouldReturnSuccess_WhenIntegerAddedwithEmptyAssetName")
+  SECTION("AddDataPointNumber_ShouldReturnSuccess_WhenFloatAddedwithEmptyAssetName")
   {
     // Add float/double data point return success with empty asset name , i.e adding float/double to root object.
     REQUIRE(zc.addDataPointNumber("key", 0.123, "") == true);
@@ -229,7 +229,7 @@ TEST_CASE("AddDataPointString")
   }
   SECTION("AddDataPointString_ShouldReturnFailure_WhenNULLKeyAdded")
   {
-    // Add data Point String with null arguments returns success
+    // Add data Point String with null arguments returns failure
     REQUIRE(zc.addDataPointString("key", NULL) == false);
   }
   SECTION("AddDataPointString_ShouldReturnSuccess_WhenSameKeyAdded")
@@ -358,6 +358,194 @@ TEST_CASE("Subscribe")
     zc.connect();
     char topic[] = "topic";
     REQUIRE(zc.subscribe(topic, callback) == -1);
+  }
+}
+
+TEST_CASE("DispatchEventFromEventDataObject")
+{
+  char mqttUserName[] = "/mqtt_domain_name/v1/devices/client_id/connect";
+  char mqttPassword[] = "mqtt_password";
+  char eventType[] = "eventType";
+  char assetName[] = "assetName";
+  char emptyString[] = "";
+  char eventDescription[] = "{\"key1\":1}";
+  PubSubClient *pub_client = new PubSubClient();
+  Mock<PubSubClient> mock;
+  fakeit::When(Method(mock, connected)).AlwaysReturn(true);
+  fakeit::When(OverloadedMethod(mock, setServer, PubSubClient & (const char *, uint16_t))).AlwaysReturn(*pub_client);
+  fakeit::When(OverloadedMethod(mock, publish, bool(const char *, const char *))).AlwaysReturn(true);
+  auto &fake_client = mock.get();
+  ZohoIOTClient zc(&fake_client, false);
+  zc.init(mqttUserName, mqttPassword);
+  zc.connect();
+  SECTION("DispatchEventFromEventDataObject_ShouldReturnSuccess_WithoutAssetName")
+  {
+    // DispatchEventFromEventDataObject return success without AssetName.
+    zc.addEventDataPointNumber("key1", 10);
+    REQUIRE(zc.dispatchEventFromEventDataObject(eventType, eventDescription, emptyString) == 0);
+  }
+  SECTION("DispatchEventFromEventDataObject_ShouldReturnSuccess_WithAssetName")
+  {
+    // DispatchEventFromEventDataObject return success with AssetName.
+    zc.addEventDataPointNumber("key2", 20);
+    REQUIRE(zc.dispatchEventFromEventDataObject(eventType, eventDescription, assetName) == 0);
+  }
+  SECTION("DispatchEventFromEventDataObject_ShouldReturnFailure_WithImporperArguments")
+  {
+    // DispatchEventFromEventDataObject return failure without Proper arguments.
+    zc.addEventDataPointNumber("key1", 20);
+    REQUIRE(zc.dispatchEventFromEventDataObject(emptyString, eventDescription, assetName) == -1);
+    REQUIRE(zc.dispatchEventFromEventDataObject(eventType, NULL, assetName) == -1);
+  }
+
+  SECTION("DispatchEventFromEventDataObject_ShouldReturnFailure_WithoutConnection")
+  {
+    // DispatchEventFromEventDataObject return faiure when called without connection.
+    Mock<PubSubClient> mock;
+    fakeit::When(Method(mock, connected)).AlwaysReturn(true);
+    fakeit::When(OverloadedMethod(mock, publish, bool(const char *, const char *))).AlwaysReturn(false);
+    auto &client = mock.get();
+    ZohoIOTClient zc(&client, false);
+    zc.addEventDataPointNumber("key1", 10);
+    REQUIRE(zc.dispatchEventFromEventDataObject(eventType, eventDescription, assetName) == -2);
+  }
+
+  SECTION("DispatchEventFromEventDataObject_ShouldReturnFailure_WithUnPublishedPayload")
+  {
+    // DispatchEventFromEventDataObject return faiure as Publish failed.
+    Mock<PubSubClient> mock;
+    fakeit::When(Method(mock, connected)).AlwaysReturn(true);
+    fakeit::When(OverloadedMethod(mock, setServer, PubSubClient & (const char *, uint16_t))).AlwaysReturn(*pub_client);
+    fakeit::When(OverloadedMethod(mock, publish, bool(const char *, const char *))).AlwaysReturn(false);
+    auto &client = mock.get();
+    ZohoIOTClient zc(&client, false);
+    zc.init(mqttUserName, mqttPassword);
+    zc.connect();
+    zc.addEventDataPointNumber("key1", 40);
+    REQUIRE(zc.dispatchEventFromEventDataObject(eventType, eventDescription, assetName) == -1);
+  }
+}
+
+TEST_CASE("AddEventDataPointNumber")
+{
+  Mock<PubSubClient> mock;
+  auto &client = mock.get();
+  ZohoIOTClient zc(&client, false);
+  SECTION("AddEventDataPointNumber_ShouldReturnSuccess_WhenIntegerAdded")
+  {
+    // Add addEventDataPointNumber with int data returns success.
+    REQUIRE(zc.addEventDataPointNumber("key1", 123) == true);
+  }
+  SECTION("AddEventDataPointNumber_ShouldReturnSuccess_WhenFloatAdded")
+  {
+    // AddEventDataPointNumber with float data returns success.
+    REQUIRE(zc.addEventDataPointNumber("key1", 0.123) == true);
+  }
+  SECTION("AddEventDataPointNumber_ShouldReturnFailure_WhenImproperKeysAreAdded")
+  {
+    // Add addEventDataPointNumber with null/empty arguments returns False
+    REQUIRE(zc.addEventDataPointNumber("", 123) == false);
+    REQUIRE(zc.addEventDataPointNumber(NULL, 0.123) == false);
+  }
+  SECTION("AddEventDataPointNumber_ShouldReturnSuccess_WhenSameKeyAdded")
+  {
+    // AddEventDataPointNumber with same key return success, i.e replace old value .
+    zc.addEventDataPointNumber("key1", 0.123);
+    REQUIRE(zc.addEventDataPointNumber("key1", 456) == true);
+  }
+}
+
+TEST_CASE("addEventDataPointString")
+{
+  Mock<PubSubClient> mock;
+  auto &client = mock.get();
+  ZohoIOTClient zc(&client, false);
+  SECTION("AddEventDataPointString_ShouldReturnSuccess_WhenStringAdded")
+  {
+    // AddEventDataPointString with non-null arguments returns success
+    REQUIRE(zc.addEventDataPointString("key1", (char *)"value1") == true);
+  }
+  SECTION("AddEventDataPointString_ShouldReturnFailure_WhenNULLKeyAdded")
+  {
+    // AddEventDataPointString with null arguments returns failure
+    REQUIRE(zc.addEventDataPointString("key", NULL) == false);
+  }
+  SECTION("AddEventDataPointString_ShouldReturnSuccess_WhenSameKeyAdded")
+  {
+    // AddEventDataPointString with same key return success, i.e replace old value .
+    string str = "value1";
+    zc.addDataPointString("key1", str);
+    REQUIRE(zc.addEventDataPointString("key1", (char *)"value2") == true);
+  }
+}
+
+TEST_CASE("DispatchEventFromJSONString")
+{
+  char mqttUserName[] = "/mqtt_domain_name/v1/devices/client_id/connect";
+  char mqttPassword[] = "mqtt_password";
+  char eventType[] = "eventType";
+  char assetName[] = "assetName";
+  char emptyString[] = "";
+  char eventDescription[] = "{\"key1\":1}";
+  PubSubClient *pub_client = new PubSubClient();
+  Mock<PubSubClient> mock;
+  fakeit::When(Method(mock, connected)).AlwaysReturn(true);
+  fakeit::When(OverloadedMethod(mock, setServer, PubSubClient & (const char *, uint16_t))).AlwaysReturn(*pub_client);
+  fakeit::When(OverloadedMethod(mock, publish, bool(const char *, const char *))).AlwaysReturn(true);
+  char eventDataJsonString[] = "{\"abc\":1}";
+  auto &fake_client = mock.get();
+  ZohoIOTClient zc(&fake_client, false);
+  zc.init(mqttUserName, mqttPassword);
+  zc.connect();
+  SECTION("DispatchEventFromJSONString_ShouldReturnSuccess_WithoutAssetName")
+  {
+    // DispatchEventFromJSONString return success without AssetName.
+    REQUIRE(zc.dispatchEventFromJSONString(eventType, eventDescription, eventDataJsonString, emptyString) == 0);
+  }
+
+  SECTION("DispatchEventFromJSONString_ShouldReturnSuccess_WithAssetName")
+  {
+    // DispatchEventFromJSONString return success with AssetName.
+    REQUIRE(zc.dispatchEventFromJSONString(eventType, eventDescription, eventDataJsonString, assetName) == 0);
+  }
+
+  SECTION("DispatchEventFromJSONString_ShouldReturnFailure_WithImporperArguments")
+  {
+    // DispatchEventFromJSONString return failure without Proper arguments.
+    REQUIRE(zc.dispatchEventFromJSONString(emptyString, eventDescription, eventDataJsonString, assetName) == -1);
+    REQUIRE(zc.dispatchEventFromJSONString(eventType, NULL, eventDataJsonString, assetName) == -1);
+  }
+
+  SECTION("DispatchEventFromJSONString_ShouldReturnFailure_WithImporperEventDataJsonString")
+  {
+    // DispatchEventFromJSONString return failure without ImProper EventDataJsonString.
+    char wrongDataJsonString[] = "{\"str\" 3}";
+    REQUIRE(zc.dispatchEventFromJSONString(eventType, eventDescription, wrongDataJsonString, emptyString) == -1);
+  }
+
+  SECTION("DispatchEventFromJSONString_ShouldReturnFailure_WithoutConnection")
+  {
+    // DispatchEventFromJSONString return faiure when called without connection.
+    Mock<PubSubClient> mock;
+    fakeit::When(Method(mock, connected)).AlwaysReturn(true);
+    fakeit::When(OverloadedMethod(mock, publish, bool(const char *, const char *))).AlwaysReturn(false);
+    auto &client = mock.get();
+    ZohoIOTClient zc(&client, false);
+    REQUIRE(zc.dispatchEventFromJSONString(eventType, eventDescription, eventDataJsonString, assetName) == -2);
+  }
+
+  SECTION("DispatchEventFromJSONString_ShouldReturnFailure_WithUnPublishedPayload")
+  {
+    // DispatchEventFromJSONString return faiure as Publish failed.
+    Mock<PubSubClient> mock;
+    fakeit::When(Method(mock, connected)).AlwaysReturn(true);
+    fakeit::When(OverloadedMethod(mock, setServer, PubSubClient & (const char *, uint16_t))).AlwaysReturn(*pub_client);
+    fakeit::When(OverloadedMethod(mock, publish, bool(const char *, const char *))).AlwaysReturn(false);
+    auto &client = mock.get();
+    ZohoIOTClient zc(&client, false);
+    zc.init(mqttUserName, mqttPassword);
+    zc.connect();
+    REQUIRE(zc.dispatchEventFromJSONString(eventType, eventDescription, eventDataJsonString, assetName) == -1);
   }
 }
 
