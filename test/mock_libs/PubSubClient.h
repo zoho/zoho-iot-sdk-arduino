@@ -1,6 +1,14 @@
 #ifndef PubSubClient_h
 #define PubSubClient_h
 
+#ifndef ESP8266
+#define ESP8266
+#endif
+
+#ifndef ESP32
+#define ESP32
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <Client.h>

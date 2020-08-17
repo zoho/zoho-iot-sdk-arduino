@@ -9,7 +9,11 @@ ZohoIOTClient zc(&espClient, true);
 const char fingerPrint[] = "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD";
 #define MQTT_USERNAME (char *)"/mqtt_domain_name/v1/devices/client_id/connect"
 #define MQTT_PASSWORD (char *)"mqtt_password"
+#define CLIENT_ID (char *)"client_id"
+
 const long interval = 1000;
+ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESFULLY_EXECUTED;
+char *sub_topic = strcat(strcat("/devices/", CLIENT_ID), "/commands");
 void on_message(char *topic, byte *payload, unsigned int length)
 {
     Serial.println("new message recieved");
@@ -23,6 +27,19 @@ void on_message(char *topic, byte *payload, unsigned int length)
     Serial.print(" ] : ");
     Serial.print(msg);
     Serial.println();
+    if (strcmp(topic, comm_topic) == 0)
+    {
+        DynamicJsonBuffer on_msg_buff;
+        JsonArray &commandMessageArray = on_msg_buff.parseArray(msg);
+        int msglength = commandMessageArray.measureLength();
+        char response_msg[] = "Successfully completed the operation";
+        for (int itr = 0; itr < msglength; itr++)
+        {
+            JsonObject &commandMessageObj = commandMessageArray.get<JsonObject>(itr);
+            const char *correlation_id = commandMessageObj.get<const char *>("correlation_id");
+            zc.publishCommandAck(correlation_id, success_response_code, response_msg);
+        }
+    }
 }
 
 void setup_wifi()
@@ -64,8 +81,7 @@ void setup()
     espClient.setFingerprint(fingerPrint);
     zc.init(MQTT_USERNAME, MQTT_PASSWORD);
     zc.connect();
-    char *sub_topic = strcat(strcat("/devices/", "client_id"), "/commands");
-    zc.subscribe(sub_topic, on_message);
+    zc.subscribe(on_message);
     Serial.println("Ready!");
 }
 

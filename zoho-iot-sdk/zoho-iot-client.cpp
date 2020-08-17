@@ -1,14 +1,22 @@
 #include "zoho-iot-client.h"
+
 char connectionStringBuff[256] = "";
 void ZohoIOTClient::formMqttPublishTopic(char *client_id)
 {
     //TODO: To find alternative for new operator for string concatenation.
-    int publish_topic_size = strlen(topic_prefix) + strlen(client_id) + strlen(telemetry) + 1;
-    int event_topic_size = strlen(topic_prefix) + strlen(client_id) + strlen(event) + 1;
+    int topic_common_length = strlen(topic_prefix) + strlen(client_id) + 1;
+    int publish_topic_size = topic_common_length + strlen(telemetry);
+    int event_topic_size = topic_common_length + strlen(event);
+    int command_topic_size = topic_common_length + strlen(command);
+    int command_ack_topic_size = topic_common_length + strlen(commandAck);
     _publish_topic = new char[publish_topic_size];
     _event_topic = new char[event_topic_size];
+    _command_topic = new char[command_topic_size];
+    _command_ack_topic = new char[command_ack_topic_size];
     snprintf(_publish_topic, publish_topic_size, "%s%s%s", topic_prefix, client_id, telemetry);
     snprintf(_event_topic, event_topic_size, "%s%s%s", topic_prefix, client_id, event);
+    snprintf(_command_topic, command_topic_size, "%s%s%s", topic_prefix, client_id, command);
+    snprintf(_command_ack_topic, command_ack_topic_size, "%s%s%s", topic_prefix, client_id, commandAck);
 }
 
 bool ZohoIOTClient::extractMqttServerAndDeviceDetails(const string &mqttUserName)
@@ -64,7 +72,7 @@ int ZohoIOTClient::dispatchEventFromJSONString(char *eventType, char *eventDescr
 {
     if (currentState != CONNECTED)
     {
-        return CONNECTION_ERROR;
+        return CLIENT_ERROR;
     }
 
     if (!_mqtt_client->connected())
@@ -73,7 +81,7 @@ int ZohoIOTClient::dispatchEventFromJSONString(char *eventType, char *eventDescr
         return FAILURE;
     }
 
-    if (!checkStringIsValid(eventType)|| eventDescription == NULL || !checkStringIsValid(eventDataJSONString))
+    if (!checkStringIsValid(eventType) || eventDescription == NULL || !checkStringIsValid(eventDataJSONString))
     {
         // Serial.println("Event Type/Description or dataJsonString cant be Null or empty");
         return FAILURE;
@@ -127,7 +135,7 @@ int ZohoIOTClient::publish(char *message)
 {
     if (currentState != CONNECTED)
     {
-        return CONNECTION_ERROR;
+        return CLIENT_ERROR;
     }
     if (message == NULL)
     {
@@ -149,12 +157,43 @@ int ZohoIOTClient::publish(char *message)
     }
 }
 
+int ZohoIOTClient::publishCommandAck(char *correlation_id, commandAckResponseCodes status_code, char *responseMessage)
+{
+    if (currentState != CONNECTED)
+    {
+        return CLIENT_ERROR;
+    }
+    if (!checkStringIsValid(correlation_id) || responseMessage == NULL)
+    {
+        // Serial.println("Correlation_id or responseMessage cant be Null or empty");
+        return FAILURE;
+    }
+
+    DynamicJsonBuffer command_ack_buffer;
+    JsonObject &commandAckMessageObj = command_ack_buffer.createObject();
+    JsonObject &commandAckObject = command_ack_buffer.createObject();
+    commandAckMessageObj[correlation_id] = commandAckObject;
+    commandAckObject["status"] = (int)status_code;
+    commandAckObject["response"] = responseMessage;
+    int size = commandAckMessageObj.measureLength();
+    char payloadMsg[size];
+    commandAckMessageObj.printTo(payloadMsg, size);
+    if (_mqtt_client->publish(_command_ack_topic, payloadMsg) == true)
+    {
+        return SUCCESS;
+    }
+    else
+    {
+        return FAILURE;
+    }
+}
+
 int ZohoIOTClient::dispatch()
 {
     //Form json payload and publish to HUB...
     if (currentState != CONNECTED)
     {
-        return CONNECTION_ERROR;
+        return CLIENT_ERROR;
     }
     int size = root.measureLength() + 1;
     char payloadMsg[size];
@@ -186,7 +225,7 @@ int ZohoIOTClient::connect()
     //TODO: resubscribe old subscriptions if reconnecting.
     if (currentState < INITIALIZED)
     {
-        return CONNECTION_ERROR;
+        return CLIENT_ERROR;
     }
     // bool connectionState = _mqtt_client->connected();
     if (_mqtt_client->connected())
@@ -222,19 +261,55 @@ int ZohoIOTClient::connect()
             retryCount++;
         }
     }
-    return CONNECTION_ERROR;
+    return CLIENT_ERROR;
 }
 
-int ZohoIOTClient::subscribe(char *topic, MQTT_CALLBACK_SIGNATURE)
+void ZohoIOTClient::onMessageReceived(char *topic, uint8_t *payload, unsigned int length)
+{
+    DynamicJsonBuffer on_message_handler_buffer, ack_message_buffer;
+    char payload_msg[length + 1];
+    uint8_t frwd_payload[length];
+    int len = strlen(topic);
+    char frwd_topic[len];
+    strcpy(frwd_topic, topic);
+    for (int itr = 0; itr < (int)length; itr++)
+    {
+        frwd_payload[itr] = payload[itr];
+        payload_msg[itr] = (char)payload[itr];
+    }
+    if (strcmp(topic, _command_topic) == 0)
+    {
+        JsonArray &commandMessageArray = on_message_handler_buffer.parseArray(payload_msg);
+        int msglength = commandMessageArray.measureLength();
+        JsonObject &commandAckMessage = ack_message_buffer.createObject();
+        for (int itr = 0; itr < msglength; itr++)
+        {
+            JsonObject &commandMessageObj = commandMessageArray.get<JsonObject>(itr);
+            const char *correlation_id = commandMessageObj.get<const char *>("correlation_id");
+            JsonObject &object = ack_message_buffer.createObject();
+            object["status_code"] = COMMAND_RECIEVED_ACK_CODE;
+            object["response"] = "";
+            commandAckMessage[correlation_id] = object;
+        }
+        int size = commandAckMessage.measureLength() + 1;
+        char commandAckMessageString[size];
+        commandAckMessage.printTo(commandAckMessageString, size);
+        _mqtt_client->publish(_command_ack_topic, commandAckMessageString);
+        on_message_handler_buffer.clear();
+        ack_message_buffer.clear();
+    }
+    this->callback(frwd_topic, frwd_payload, length);
+}
+
+int ZohoIOTClient::subscribe(MQTT_CALLBACK_SIGNATURE)
 {
     //Subscribe to topic and set method to be called message on that topic.
     //TODO: Empty validation
     if (currentState != CONNECTED)
     {
-        return CONNECTION_ERROR;
+        return CLIENT_ERROR;
     }
-
-    if (topic == NULL)
+    if (callback == NULL)
     {
         return FAILURE;
     }
@@ -243,8 +318,9 @@ int ZohoIOTClient::subscribe(char *topic, MQTT_CALLBACK_SIGNATURE)
         currentState = CONNECTION_LOST;
         return FAILURE;
     }
-    _mqtt_client->setCallback(callback);
-    if (!_mqtt_client->subscribe(topic))
+    _mqtt_client->setCallback([this](char *topic, uint8_t *payload, unsigned int length) { this->onMessageReceived(topic, payload, length); });
+    this->callback = callback;
+    if (!_mqtt_client->subscribe(_command_topic))
     {
         return FAILURE;
     }
