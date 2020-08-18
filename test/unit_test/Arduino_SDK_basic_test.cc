@@ -1,4 +1,6 @@
+#ifndef CATCH_CONFIG_MAIN
 #define CATCH_CONFIG_MAIN
+
 #include <catch.hpp>
 
 #include "PubSubClient.h"
@@ -20,12 +22,12 @@ TEST_CASE("Init")
     // Init method with NULL parameters returns failure
     char *nullMqttUserName = NULL;
     char *nullMqttPassword = NULL;
-    REQUIRE(zc.init(nullMqttUserName, nullMqttPassword) == -1);
+    REQUIRE(zc.init(nullMqttUserName, nullMqttPassword) == ZohoIOTClient::FAILURE);
   }
   SECTION("Init_ShouldReturnsSuccess_WithNotNULLArguments ")
   {
     // Init method with non-NULL parameters returns success.
-    REQUIRE(zc.init(mqttUserName, mqttPassword) == 0);
+    REQUIRE(zc.init(mqttUserName, mqttPassword) == ZohoIOTClient::SUCCESS);
   }
 }
 
@@ -41,7 +43,7 @@ TEST_CASE("Connect")
     fakeit::When(OverloadedMethod(mock, setServer, PubSubClient & (const char *, uint16_t))).AlwaysReturn(*pub_client);
     auto &client = mock.get();
     ZohoIOTClient zc(&client, false);
-    REQUIRE(zc.connect() == -2);
+    REQUIRE(zc.connect() == ZohoIOTClient::CLIENT_ERROR);
   }
   SECTION("Connect_ShouldreturnFailure_WithLostConnection")
   {
@@ -53,7 +55,7 @@ TEST_CASE("Connect")
     auto &client = mock.get();
     ZohoIOTClient zc(&client, false);
     zc.init(mqttUserName, mqttPassword);
-    REQUIRE(zc.connect() == -2);
+    REQUIRE(zc.connect() == ZohoIOTClient::CLIENT_ERROR);
   }
   SECTION("Connect_ShouldreturnSuccess_WithExistingConnection")
   {
@@ -64,7 +66,7 @@ TEST_CASE("Connect")
     auto &client = mock.get();
     ZohoIOTClient zc(&client, false);
     zc.init(mqttUserName, mqttPassword);
-    REQUIRE(zc.connect() == 0);
+    REQUIRE(zc.connect() == ZohoIOTClient::SUCCESS);
   }
   SECTION("Connect_ShouldreturnSuccess_WithNewConnection")
   {
@@ -76,7 +78,7 @@ TEST_CASE("Connect")
     auto &client = mock.get();
     ZohoIOTClient zc(&client, false);
     zc.init(mqttUserName, mqttPassword);
-    REQUIRE(zc.connect() == 0);
+    REQUIRE(zc.connect() == ZohoIOTClient::SUCCESS);
   }
   SECTION("Connect_ShouldReturnSuccess_WithRetriedConnection")
   {
@@ -88,7 +90,7 @@ TEST_CASE("Connect")
     auto &client = mock.get();
     ZohoIOTClient zc(&client, false);
     zc.init(mqttUserName, mqttPassword);
-    REQUIRE(zc.connect() == 0);
+    REQUIRE(zc.connect() == ZohoIOTClient::SUCCESS);
   }
 }
 
@@ -106,7 +108,7 @@ TEST_CASE("Publish")
     auto &fake_client = mock.get();
     ZohoIOTClient zc(&fake_client, false);
     char message[] = "message";
-    REQUIRE(zc.publish(message) == -2);
+    REQUIRE(zc.publish(message) == ZohoIOTClient::CLIENT_ERROR);
   }
   SECTION("Publish_ShouldReturnsSuccess_WithNotNULLArguments ")
   {
@@ -120,7 +122,7 @@ TEST_CASE("Publish")
     zc.init(mqttUserName, mqttPassword);
     zc.connect();
     char message[] = "message";
-    REQUIRE(zc.publish(message) == 0);
+    REQUIRE(zc.publish(message) == ZohoIOTClient::SUCCESS);
   }
   SECTION("Publish_ShouldReturnsFailure_WithLostConnection")
   {
@@ -134,7 +136,7 @@ TEST_CASE("Publish")
     zc.init(mqttUserName, mqttPassword);
     zc.connect();
     char message[] = "message";
-    REQUIRE(zc.publish(message) == -1);
+    REQUIRE(zc.publish(message) == ZohoIOTClient::FAILURE);
   }
   SECTION("Publish_ShouldReturnFailure_WithNULLMessage")
   {
@@ -147,7 +149,7 @@ TEST_CASE("Publish")
     ZohoIOTClient zc(&fake_client, false);
     zc.init(mqttUserName, mqttPassword);
     zc.connect();
-    REQUIRE(zc.publish(NULL) == -1);
+    REQUIRE(zc.publish(NULL) == ZohoIOTClient::FAILURE);
   }
 }
 
@@ -199,7 +201,6 @@ TEST_CASE("AddDataPointNUmber")
     zc.addDataPointNumber("key1", 0.123, "asset");
     REQUIRE(zc.addDataPointNumber("key1", 456, "asset") == true);
   }
-
   SECTION("AddDataPointNumber_ShouldReturnSuccess_WhenIntegerAddedwithNULLAssetName")
   {
     // Add integer data point return success with NULL asset name , i.e adding int to root object.
@@ -297,7 +298,7 @@ TEST_CASE("markDataPointAsError")
   }
 }
 
-void callback(char *, uint8_t *, unsigned int) {}
+void subscribe_callback(char *, uint8_t *, unsigned int) {}
 TEST_CASE("Subscribe")
 {
   char mqttUserName[] = "/mqtt_domain_name/v1/devices/client_id/connect";
@@ -315,8 +316,7 @@ TEST_CASE("Subscribe")
     ZohoIOTClient zc(&client, false);
     zc.init(mqttUserName, mqttPassword);
     zc.connect();
-    char topic[] = "topic";
-    REQUIRE(zc.subscribe(topic, callback) == 0);
+    REQUIRE(zc.subscribe(subscribe_callback) == 0);
   }
   SECTION("Subscribe_ShouldReutrnFailure_WhenCalledWithoutConnection")
   {
@@ -328,8 +328,7 @@ TEST_CASE("Subscribe")
     fakeit::When(OverloadedMethod(mock, subscribe, bool(const char *))).AlwaysReturn(true);
     auto &client = mock.get();
     ZohoIOTClient zc(&client, false);
-    char topic[] = "topic";
-    REQUIRE(zc.subscribe(topic, callback) == -2);
+    REQUIRE(zc.subscribe(subscribe_callback) == ZohoIOTClient::CLIENT_ERROR);
   }
   SECTION("Subscribe_ShouldReutrnFailure_WithNULLarguments")
   {
@@ -338,12 +337,13 @@ TEST_CASE("Subscribe")
     PubSubClient *pub_client = new PubSubClient();
     fakeit::When(Method(mock, connected)).AlwaysReturn(true);
     fakeit::When(OverloadedMethod(mock, setServer, PubSubClient & (const char *, uint16_t))).AlwaysReturn(*pub_client);
+    fakeit::When(OverloadedMethod(mock, setCallback, PubSubClient & (MQTT_CALLBACK_SIGNATURE))).AlwaysReturn(*pub_client);
     fakeit::When(OverloadedMethod(mock, subscribe, bool(const char *))).Return(true);
     auto &client = mock.get();
     ZohoIOTClient zc(&client, false);
     zc.init(mqttUserName, mqttPassword);
     zc.connect();
-    REQUIRE(zc.subscribe(NULL, callback) == -1);
+    REQUIRE(zc.subscribe(NULL) == ZohoIOTClient::FAILURE);
   }
   SECTION("Subscribe_ShouldReutrnFailure_WithLostConnection")
   {
@@ -356,8 +356,7 @@ TEST_CASE("Subscribe")
     ZohoIOTClient zc(&client, false);
     zc.init(mqttUserName, mqttPassword);
     zc.connect();
-    char topic[] = "topic";
-    REQUIRE(zc.subscribe(topic, callback) == -1);
+    REQUIRE(zc.subscribe(subscribe_callback) == ZohoIOTClient::FAILURE);
   }
 }
 
@@ -394,10 +393,9 @@ TEST_CASE("DispatchEventFromEventDataObject")
   {
     // DispatchEventFromEventDataObject return failure without Proper arguments.
     zc.addEventDataPointNumber("key1", 20);
-    REQUIRE(zc.dispatchEventFromEventDataObject(emptyString, eventDescription, assetName) == -1);
-    REQUIRE(zc.dispatchEventFromEventDataObject(eventType, NULL, assetName) == -1);
+    REQUIRE(zc.dispatchEventFromEventDataObject(emptyString, eventDescription, assetName) == ZohoIOTClient::FAILURE);
+    REQUIRE(zc.dispatchEventFromEventDataObject(eventType, NULL, assetName) == ZohoIOTClient::FAILURE);
   }
-
   SECTION("DispatchEventFromEventDataObject_ShouldReturnFailure_WithoutConnection")
   {
     // DispatchEventFromEventDataObject return faiure when called without connection.
@@ -407,9 +405,8 @@ TEST_CASE("DispatchEventFromEventDataObject")
     auto &client = mock.get();
     ZohoIOTClient zc(&client, false);
     zc.addEventDataPointNumber("key1", 10);
-    REQUIRE(zc.dispatchEventFromEventDataObject(eventType, eventDescription, assetName) == -2);
+    REQUIRE(zc.dispatchEventFromEventDataObject(eventType, eventDescription, assetName) == ZohoIOTClient::CLIENT_ERROR);
   }
-
   SECTION("DispatchEventFromEventDataObject_ShouldReturnFailure_WithUnPublishedPayload")
   {
     // DispatchEventFromEventDataObject return faiure as Publish failed.
@@ -422,7 +419,7 @@ TEST_CASE("DispatchEventFromEventDataObject")
     zc.init(mqttUserName, mqttPassword);
     zc.connect();
     zc.addEventDataPointNumber("key1", 40);
-    REQUIRE(zc.dispatchEventFromEventDataObject(eventType, eventDescription, assetName) == -1);
+    REQUIRE(zc.dispatchEventFromEventDataObject(eventType, eventDescription, assetName) == ZohoIOTClient::FAILURE);
   }
 }
 
@@ -502,27 +499,23 @@ TEST_CASE("DispatchEventFromJSONString")
     // DispatchEventFromJSONString return success without AssetName.
     REQUIRE(zc.dispatchEventFromJSONString(eventType, eventDescription, eventDataJsonString, emptyString) == 0);
   }
-
   SECTION("DispatchEventFromJSONString_ShouldReturnSuccess_WithAssetName")
   {
     // DispatchEventFromJSONString return success with AssetName.
     REQUIRE(zc.dispatchEventFromJSONString(eventType, eventDescription, eventDataJsonString, assetName) == 0);
   }
-
   SECTION("DispatchEventFromJSONString_ShouldReturnFailure_WithImporperArguments")
   {
     // DispatchEventFromJSONString return failure without Proper arguments.
-    REQUIRE(zc.dispatchEventFromJSONString(emptyString, eventDescription, eventDataJsonString, assetName) == -1);
-    REQUIRE(zc.dispatchEventFromJSONString(eventType, NULL, eventDataJsonString, assetName) == -1);
+    REQUIRE(zc.dispatchEventFromJSONString(emptyString, eventDescription, eventDataJsonString, assetName) == ZohoIOTClient::FAILURE);
+    REQUIRE(zc.dispatchEventFromJSONString(eventType, NULL, eventDataJsonString, assetName) == ZohoIOTClient::FAILURE);
   }
-
   SECTION("DispatchEventFromJSONString_ShouldReturnFailure_WithImporperEventDataJsonString")
   {
     // DispatchEventFromJSONString return failure without ImProper EventDataJsonString.
     char wrongDataJsonString[] = "{\"str\" 3}";
-    REQUIRE(zc.dispatchEventFromJSONString(eventType, eventDescription, wrongDataJsonString, emptyString) == -1);
+    REQUIRE(zc.dispatchEventFromJSONString(eventType, eventDescription, wrongDataJsonString, emptyString) == ZohoIOTClient::FAILURE);
   }
-
   SECTION("DispatchEventFromJSONString_ShouldReturnFailure_WithoutConnection")
   {
     // DispatchEventFromJSONString return faiure when called without connection.
@@ -531,9 +524,8 @@ TEST_CASE("DispatchEventFromJSONString")
     fakeit::When(OverloadedMethod(mock, publish, bool(const char *, const char *))).AlwaysReturn(false);
     auto &client = mock.get();
     ZohoIOTClient zc(&client, false);
-    REQUIRE(zc.dispatchEventFromJSONString(eventType, eventDescription, eventDataJsonString, assetName) == -2);
+    REQUIRE(zc.dispatchEventFromJSONString(eventType, eventDescription, eventDataJsonString, assetName) == ZohoIOTClient::CLIENT_ERROR);
   }
-
   SECTION("DispatchEventFromJSONString_ShouldReturnFailure_WithUnPublishedPayload")
   {
     // DispatchEventFromJSONString return faiure as Publish failed.
@@ -545,7 +537,59 @@ TEST_CASE("DispatchEventFromJSONString")
     ZohoIOTClient zc(&client, false);
     zc.init(mqttUserName, mqttPassword);
     zc.connect();
-    REQUIRE(zc.dispatchEventFromJSONString(eventType, eventDescription, eventDataJsonString, assetName) == -1);
+    REQUIRE(zc.dispatchEventFromJSONString(eventType, eventDescription, eventDataJsonString, assetName) == ZohoIOTClient::FAILURE);
+  }
+}
+
+TEST_CASE("PublishCommandAck")
+{
+  char mqttUserName[] = "/mqtt_domain_name/v1/devices/client_id/connect";
+  char mqttPassword[] = "mqtt_password";
+  ZohoIOTClient::commandAckResponseCodes code = ZohoIOTClient::SUCCESFULLY_EXECUTED;
+  PubSubClient *pub_client = new PubSubClient();
+  Mock<PubSubClient> mock;
+  auto &fake_client = mock.get();
+  fakeit::When(Method(mock, connected)).AlwaysReturn(true);
+  fakeit::When(OverloadedMethod(mock, setServer, PubSubClient & (const char *, uint16_t))).AlwaysReturn(*pub_client);
+  fakeit::When(OverloadedMethod(mock, publish, bool(const char *, const char *))).AlwaysReturn(true);
+  ZohoIOTClient zc(&fake_client, false);
+  zc.init(mqttUserName, mqttPassword);
+  zc.connect();
+  char response[] = "Succesfull response";
+  char correlation_id[] = "Correltaion_id";
+  SECTION("PublishCommandAck_ShouldReturnSuccess_WithProperArguments")
+  {
+    // PublishCommandAck return success WithProperArguments.
+    REQUIRE(zc.publishCommandAck(correlation_id, code, response) == 0);
+  }
+  SECTION("PublishCommandAck_ShouldReturnFailure_WithImporperArguments")
+  {
+    // PublishCommandAck return failure without Proper arguments.
+    REQUIRE(zc.publishCommandAck(NULL, code, response) == ZohoIOTClient::FAILURE);
+    REQUIRE(zc.publishCommandAck(correlation_id, code, NULL) == ZohoIOTClient::FAILURE);
+  }
+  SECTION("PublishCommandAck_ShouldReturnFailure_WithoutConnection")
+  {
+    // PublishCommandAck return faiure when called without connection.
+    Mock<PubSubClient> mock;
+    fakeit::When(Method(mock, connected)).AlwaysReturn(true);
+    fakeit::When(OverloadedMethod(mock, publish, bool(const char *, const char *))).AlwaysReturn(false);
+    auto &client = mock.get();
+    ZohoIOTClient zc(&client, false);
+    REQUIRE(zc.publishCommandAck(correlation_id, code, response) == ZohoIOTClient::CLIENT_ERROR);
+  }
+  SECTION("PublishCommandAck_ShouldReturnFailure_WithUnPublishedPayload")
+  {
+    // PublishCommandAck return faiure as Publish failed.
+    Mock<PubSubClient> mock;
+    fakeit::When(Method(mock, connected)).AlwaysReturn(true);
+    fakeit::When(OverloadedMethod(mock, setServer, PubSubClient & (const char *, uint16_t))).AlwaysReturn(*pub_client);
+    fakeit::When(OverloadedMethod(mock, publish, bool(const char *, const char *))).AlwaysReturn(false);
+    auto &client = mock.get();
+    ZohoIOTClient zc(&client, false);
+    zc.init(mqttUserName, mqttPassword);
+    zc.connect();
+    REQUIRE(zc.publishCommandAck(correlation_id, code, response) == ZohoIOTClient::FAILURE);
   }
 }
 
@@ -590,7 +634,7 @@ TEST_CASE("Dispatch")
     fakeit::When(OverloadedMethod(mock, publish, bool(const char *, const char *))).AlwaysReturn(false);
     auto &client = mock.get();
     ZohoIOTClient zc(&client, false);
-    REQUIRE(zc.dispatch() == -2);
+    REQUIRE(zc.dispatch() == ZohoIOTClient::CLIENT_ERROR);
   }
   SECTION("Dispatch_ShouldReturnFailure_WithUnPublishedPayload")
   {
@@ -603,6 +647,7 @@ TEST_CASE("Dispatch")
     ZohoIOTClient zc(&client, false);
     zc.init(mqttUserName, mqttPassword);
     zc.connect();
-    REQUIRE(zc.dispatch() == -1);
+    REQUIRE(zc.dispatch() == ZohoIOTClient::FAILURE);
   }
 }
+#endif

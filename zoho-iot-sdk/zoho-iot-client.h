@@ -11,10 +11,14 @@
 #define topic_prefix "/devices/"
 #define telemetry "/telemetry"
 #define event "/events"
+#define command "/commands"
+#define commandAck "/commands/ack"
 
 #define sdk_name (char *)"zoho-iot-sdk-c"
 #define sdk_version (char *)"0.0.1"
 #define sdk_url (char *)""
+
+#define COMMAND_RECIEVED_ACK_CODE 1000
 
 using namespace std;
 
@@ -37,13 +41,6 @@ private:
 
   typedef enum
   {
-    SUCCESS = 0,
-    FAILURE = -1,
-    CONNECTION_ERROR = -2
-  } transactionStatus;
-
-  typedef enum
-  {
     NOT_INITIALIZED,
     INITIALIZED,
     CONNECTED,
@@ -58,7 +55,7 @@ private:
   char *_client_id;
   char *_mqtt_server;
   int _port;
-  char *_publish_topic, *_command_topic, *_event_topic;
+  char *_publish_topic, *_command_topic, *_event_topic, *_command_ack_topic;
   const unsigned int _retry_limit = 5;
   clientState currentState;
   unsigned int retryCount = 0;
@@ -108,12 +105,33 @@ private:
   void formMqttPublishTopic(char *clientID);
   bool extractMqttServerAndDeviceDetails(const string &mqttUserName);
   char *formConnectionString(char *username);
+  void onMessageReceived(char *topic, uint8_t *payload, unsigned int length);
+  MQTT_CALLBACK_SIGNATURE;
   inline bool checkStringIsValid(const char *value)
   {
     return (value == NULL || strcmp(value, "") == 0) ? false : true;
   }
 
 public:
+  typedef enum
+  {
+    SUCCESS = 0,
+    FAILURE = -1,
+    CLIENT_ERROR = -2
+  } transactionStatus;
+
+  typedef enum
+  {
+    SUCCESFULLY_EXECUTED = 1001,
+    EXECUTION_FAILURE = 4000,
+    METHOD_NOT_FOUND = 4001,
+    EXECUTING_PREVIOUS_COMMAND = 4002,
+    INSUFFICIENT_INPUTS = 4003,
+    DEVICE_CONNECTIVITY_ISSUES = 4004,
+    PARTIAL_EXECUTION = 4005,
+    ALREADY_ON_SAME_STATE = 4006
+  } commandAckResponseCodes;
+
   inline ZohoIOTClient(Client *client, bool isTLSEnabled)
   {
     _mqtt_client = new PubSubClient(*client);
@@ -134,7 +152,8 @@ public:
   int dispatch();
   int dispatchEventFromJSONString(char *eventType, char *eventDescription, char *eventDataJSONString, char *assetName);
   int dispatchEventFromEventDataObject(char *eventType, char *eventDescription, char *assetName);
-  int subscribe(char *topic, MQTT_CALLBACK_SIGNATURE);
+  int publishCommandAck(char *correlation_id, commandAckResponseCodes status_code, char *responseMessage);
+  int subscribe(MQTT_CALLBACK_SIGNATURE);
   int disconnect();
   inline void zyield()
   {
