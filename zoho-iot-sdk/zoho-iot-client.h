@@ -50,15 +50,15 @@ private:
   } clientState;
 
   PubSubClient *_mqtt_client;
-  char *_mqtt_user_name;
-  char *_mqtt_password;
+  const char *_mqtt_user_name;
+  const char *_mqtt_password;
   char *_client_id;
   char *_mqtt_server;
-  int _port;
+  uint16_t _port;
   char *_publish_topic, *_command_topic, *_event_topic, *_command_ack_topic;
-  const unsigned int _retry_limit = 5;
+  const uint16_t _retry_limit = 5;
   clientState currentState;
-  unsigned int retryCount = 0;
+  uint16_t retryCount = 0;
 
   DynamicJsonBuffer jsonBuffer;
   JsonObject &root = jsonBuffer.createObject();
@@ -102,9 +102,9 @@ private:
   {
     _port = isTLSEnabled ? 8883 : 1883;
   }
-  void formMqttPublishTopic(char *clientID);
+  void formMqttPublishTopic(const char *clientID);
   bool extractMqttServerAndDeviceDetails(const string &mqttUserName);
-  char *formConnectionString(char *username);
+  char *formConnectionString(const char *username);
   void onMessageReceived(char *topic, uint8_t *payload, unsigned int length);
   MQTT_CALLBACK_SIGNATURE;
   inline bool checkStringIsValid(const char *value)
@@ -145,16 +145,16 @@ public:
     currentState = NOT_INITIALIZED;
   }
   inline ~ZohoIOTClient() {}
-  int init(char *mqttUserName, char *mqttPassword);
+  int8_t init(const char *mqttUserName, const char *mqttPassword);
   void addConnectionParameter(char *connectionParamKey, char *connectionParamValue);
-  int connect();
-  int publish(char *message);
-  int dispatch();
-  int dispatchEventFromJSONString(char *eventType, char *eventDescription, char *eventDataJSONString, char *assetName);
-  int dispatchEventFromEventDataObject(char *eventType, char *eventDescription, char *assetName);
-  int publishCommandAck(char *correlation_id, commandAckResponseCodes status_code, char *responseMessage);
-  int subscribe(MQTT_CALLBACK_SIGNATURE);
-  int disconnect();
+  int8_t connect();
+  int8_t publish(const char *message);
+  int8_t dispatch();
+  int8_t dispatchEventFromJSONString(const char *eventType, const char *eventDescription, char *eventDataJSONString, const char *assetName);
+  int8_t dispatchEventFromEventDataObject(const char *eventType, const char *eventDescription, const char *assetName);
+  int8_t publishCommandAck(const char *correlation_id, commandAckResponseCodes status_code, const char *responseMessage);
+  int8_t subscribe(MQTT_CALLBACK_SIGNATURE);
+  int8_t disconnect();
   inline void zyield()
   {
     _mqtt_client->loop();
@@ -164,7 +164,7 @@ public:
   {
     return addEventDataPoint(key, value);
   }
-  inline bool addEventDataPointString(const char *key, char *value)
+  inline bool addEventDataPointString(const char *key, const char *value)
   {
     return checkStringIsValid(value) ? addEventDataPoint(key, value) : false;
   }
