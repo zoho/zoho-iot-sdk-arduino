@@ -90,15 +90,22 @@ void loop()
     //Watchdog for Wifi & MQTT connection status.
     //Automatically reconnect in case of connection failure.
     setup_wifi();
-    zc.connect();
+    zc.reconnect();
     if ((current_time = millis()) - prev_time >= interval)
     {
-        prev_time = current_time;
-        zc.addDataPointNumber("voltage", rand() / 100);
-        zc.addDataPointNumber("current", rand() / 300);
-        Serial.print("dispatch:");
-        Serial.println(zc.dispatch());
-        Serial.println(millis());
+        if (zc.isConnected())
+        {
+            prev_time = current_time;
+            zc.addDataPointNumber("voltage", rand() / 100);
+            zc.addDataPointNumber("current", rand() / 300);
+            Serial.print("dispatch:");
+            Serial.println(zc.dispatch());
+        }
+        else
+        {
+            Serial.println("Persist polled datapoints");
+            // Write your Own persistance logic to store and publish data.
+        }
     }
     zc.zyield();
 }

@@ -2,6 +2,7 @@
 #define ZOHO_IOT_CLIENT_H_
 
 #include <stdlib.h>
+#include <Arduino.h>
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 #include <map>
@@ -14,11 +15,13 @@
 #define command "/commands"
 #define commandAck "/commands/ack"
 
-#define sdk_name (char *)"zoho-iot-sdk-c"
+#define sdk_name (char *)"zoho-iot-sdk-arduino"
 #define sdk_version (char *)"0.0.1"
 #define sdk_url (char *)""
 
 #define COMMAND_RECIEVED_ACK_CODE 1000
+#define MAX_RETRY_INTERVAL 1800
+#define MIN_RETRY_INTERVAL 2
 
 using namespace std;
 
@@ -49,6 +52,7 @@ private:
     DISCONNECTED
   } clientState;
 
+  unsigned long current_retry_interaval = (unsigned long)MIN_RETRY_INTERVAL;
   PubSubClient *_mqtt_client;
   const char *_mqtt_user_name;
   const char *_mqtt_password;
@@ -117,6 +121,7 @@ public:
   {
     SUCCESS = 0,
     FAILURE = -1,
+    CONNECTION_ERROR = -3,
     CLIENT_ERROR = -2
   } transactionStatus;
 
@@ -154,7 +159,13 @@ public:
   int8_t dispatchEventFromEventDataObject(const char *eventType, const char *eventDescription, const char *assetName);
   int8_t publishCommandAck(const char *correlation_id, commandAckResponseCodes status_code, const char *responseMessage);
   int8_t subscribe(MQTT_CALLBACK_SIGNATURE);
+  int8_t reconnect();
   int8_t disconnect();
+  inline bool isConnected()
+  {
+    bool status = _mqtt_client->connected();
+    return status;
+  }
   inline void zyield()
   {
     _mqtt_client->loop();

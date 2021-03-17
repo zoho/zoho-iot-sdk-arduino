@@ -1,6 +1,8 @@
 #include "zoho-iot-client.h"
 
 char connectionStringBuff[256] = "";
+unsigned long start_time = 0;
+bool retried = false;
 void ZohoIOTClient::formMqttPublishTopic(const char *client_id)
 {
     //TODO: To find alternative for new operator for string concatenation.
@@ -219,6 +221,70 @@ char *ZohoIOTClient::formConnectionString(const char *username)
     return connectionStringBuff;
 }
 
+int16_t getRetryInterval(unsigned long *curr_retry_interval)
+{
+    if (*curr_retry_interval <= 0)
+    {
+        *curr_retry_interval = MIN_RETRY_INTERVAL;
+    }
+    if (*curr_retry_interval < MAX_RETRY_INTERVAL)
+    {
+        *curr_retry_interval = *curr_retry_interval * 2;
+    }
+    else
+    {
+        *curr_retry_interval = MAX_RETRY_INTERVAL;
+    }
+    return *curr_retry_interval;
+}
+
+int8_t ZohoIOTClient::reconnect()
+{
+    if (currentState < INITIALIZED)
+    {
+        return CLIENT_ERROR;
+    }
+
+    if (_mqtt_client->connected())
+    {
+        //Already having an active connecting with HUB... No job to do here..
+        currentState = CONNECTED;
+        return SUCCESS;
+    }
+    if (start_time <= 0)
+    {
+        start_time = millis();
+    }
+
+    if (millis() - start_time > current_retry_interaval * 1000)
+    {
+        // Serial.println("trying to reconnect");
+        int rc = connect();
+        if (rc == SUCCESS)
+        {
+            // Serial.println("connected");
+            currentState = CONNECTED;
+            retryCount = 0;
+            current_retry_interaval = (unsigned long)MIN_RETRY_INTERVAL;
+            start_time = 0;
+            return SUCCESS;
+        }
+        start_time = millis();
+        current_retry_interaval = getRetryInterval(&current_retry_interaval);
+        retryCount = retryCount + 1;
+        // Serial.println("current time");
+        // Serial.println(millis());
+        // Serial.print("Retrying in ");
+        // Serial.print((int)current_retry_interaval);
+        // Serial.println(" seconds");
+        if (currentState != DISCONNECTED && currentState != CONNECTED)
+        {
+            return CLIENT_ERROR;
+        }
+    }
+    return FAILURE;
+}
+
 int8_t ZohoIOTClient::connect()
 {
     //TODO: Empty validation
@@ -234,34 +300,17 @@ int8_t ZohoIOTClient::connect()
         currentState = CONNECTED;
         return SUCCESS;
     }
-    // Serial.println("Connecting..");
-    while (!_mqtt_client->connected())
+    _mqtt_client->connect(_client_id, formConnectionString(_mqtt_user_name), _mqtt_password);
+    if (_mqtt_client->connected())
     {
-        _mqtt_client->connect(_client_id, formConnectionString(_mqtt_user_name), _mqtt_password);
-        if (retryCount > _retry_limit)
-        {
-            currentState = RETRYING;
-            break;
-        }
-        if (_mqtt_client->connected())
-        {
-            retryCount = 0;
-            currentState = CONNECTED;
-            return SUCCESS;
-        }
-        else
-        {
-            //Serial.print("RetryCount: ");
-            // Serial.println(retryCount);
-            // Serial.print("Failed. rc:");
-            // Serial.print(_mqtt_client.state());
-            // Serial.println(" Retry in 5 seconds");
-            delay(5000);
-            currentState = RETRYING;
-            retryCount++;
-        }
+        currentState = CONNECTED;
+        return SUCCESS;
     }
-    return CLIENT_ERROR;
+    else
+    {
+        currentState = RETRYING;
+        return FAILURE;
+    }
 }
 
 void ZohoIOTClient::onMessageReceived(char *topic, uint8_t *payload, unsigned int length)

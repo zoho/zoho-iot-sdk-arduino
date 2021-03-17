@@ -55,7 +55,7 @@ TEST_CASE("Connect")
     auto &client = mock.get();
     ZohoIOTClient zc(&client, false);
     zc.init(mqttUserName, mqttPassword);
-    REQUIRE(zc.connect() == ZohoIOTClient::CLIENT_ERROR);
+    REQUIRE(zc.connect() == ZohoIOTClient::FAILURE);
   }
   SECTION("Connect_ShouldreturnSuccess_WithExistingConnection")
   {
@@ -73,25 +73,25 @@ TEST_CASE("Connect")
     // Connect with new connection return success.
     Mock<PubSubClient> mock;
     fakeit::When(OverloadedMethod(mock, setServer, PubSubClient & (const char *, uint16_t))).AlwaysReturn(*pub_client);
-    fakeit::When(Method(mock, connected)).Return(2_Times(false), true);
+    fakeit::When(Method(mock, connected)).Return(1_Times(false), true);
     fakeit::When(OverloadedMethod(mock, connect, bool(const char *, const char *, const char *))).AlwaysReturn(true);
     auto &client = mock.get();
     ZohoIOTClient zc(&client, false);
     zc.init(mqttUserName, mqttPassword);
     REQUIRE(zc.connect() == ZohoIOTClient::SUCCESS);
   }
-  SECTION("Connect_ShouldReturnSuccess_WithRetriedConnection")
-  {
-    // Connect should return success with retried connection.
-    Mock<PubSubClient> mock;
-    fakeit::When(OverloadedMethod(mock, setServer, PubSubClient & (const char *, uint16_t))).AlwaysReturn(*pub_client);
-    fakeit::When(Method(mock, connected)).Return(4_Times(false), true);
-    fakeit::When(OverloadedMethod(mock, connect, bool(const char *, const char *, const char *))).AlwaysReturn(true);
-    auto &client = mock.get();
-    ZohoIOTClient zc(&client, false);
-    zc.init(mqttUserName, mqttPassword);
-    REQUIRE(zc.connect() == ZohoIOTClient::SUCCESS);
-  }
+  // SECTION("Connect_ShouldReturnSuccess_WithRetriedConnection")
+  // {
+  //   // Connect should return success with retried connection.
+  //   Mock<PubSubClient> mock;
+  //   fakeit::When(OverloadedMethod(mock, setServer, PubSubClient & (const char *, uint16_t))).AlwaysReturn(*pub_client);
+  //   fakeit::When(Method(mock, connected)).Return(4_Times(false), true);
+  //   fakeit::When(OverloadedMethod(mock, connect, bool(const char *, const char *, const char *))).AlwaysReturn(true);
+  //   auto &client = mock.get();
+  //   ZohoIOTClient zc(&client, false);
+  //   zc.init(mqttUserName, mqttPassword);
+  //   REQUIRE(zc.connect() == ZohoIOTClient::SUCCESS);
+  // }
 }
 
 TEST_CASE("Publish")
