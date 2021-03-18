@@ -1,14 +1,16 @@
 #include "zoho-iot-client.h"
 
 char connectionStringBuff[256] = "";
-void ZohoIOTClient::formMqttPublishTopic(char *client_id)
+unsigned long start_time = 0;
+bool retried = false;
+void ZohoIOTClient::formMqttPublishTopic(const char *client_id)
 {
     //TODO: To find alternative for new operator for string concatenation.
-    int topic_common_length = strlen(topic_prefix) + strlen(client_id) + 1;
-    int publish_topic_size = topic_common_length + strlen(telemetry);
-    int event_topic_size = topic_common_length + strlen(event);
-    int command_topic_size = topic_common_length + strlen(command);
-    int command_ack_topic_size = topic_common_length + strlen(commandAck);
+    uint8_t topic_common_length = strlen(topic_prefix) + strlen(client_id) + 1;
+    uint8_t publish_topic_size = topic_common_length + strlen(telemetry);
+    uint8_t event_topic_size = topic_common_length + strlen(event);
+    uint8_t command_topic_size = topic_common_length + strlen(command);
+    uint8_t command_ack_topic_size = topic_common_length + strlen(commandAck);
     _publish_topic = new char[publish_topic_size];
     _event_topic = new char[event_topic_size];
     _command_topic = new char[command_topic_size];
@@ -39,7 +41,7 @@ bool ZohoIOTClient::extractMqttServerAndDeviceDetails(const string &mqttUserName
     return true;
 }
 
-int ZohoIOTClient::init(char *mqttUserName, char *mqttPassword)
+int8_t ZohoIOTClient::init(const char *mqttUserName, const char *mqttPassword)
 {
     if (mqttUserName == NULL || mqttPassword == NULL)
     {
@@ -60,7 +62,7 @@ int ZohoIOTClient::init(char *mqttUserName, char *mqttPassword)
     return SUCCESS;
 }
 
-int ZohoIOTClient::dispatchEventFromEventDataObject(char *eventType, char *eventDescription, char *assetName)
+int8_t ZohoIOTClient::dispatchEventFromEventDataObject(const char *eventType, const char *eventDescription, const char *assetName)
 {
     int size = eventDataObject.measureLength() + 1;
     char eventDataJSONString[size];
@@ -68,7 +70,7 @@ int ZohoIOTClient::dispatchEventFromEventDataObject(char *eventType, char *event
     return dispatchEventFromJSONString(eventType, eventDescription, eventDataJSONString, assetName);
 }
 
-int ZohoIOTClient::dispatchEventFromJSONString(char *eventType, char *eventDescription, char *eventDataJSONString, char *assetName)
+int8_t ZohoIOTClient::dispatchEventFromJSONString(const char *eventType, const char *eventDescription, char *eventDataJSONString, const char *assetName)
 {
     if (currentState != CONNECTED)
     {
@@ -131,7 +133,7 @@ int ZohoIOTClient::dispatchEventFromJSONString(char *eventType, char *eventDescr
     }
 }
 
-int ZohoIOTClient::publish(char *message)
+int8_t ZohoIOTClient::publish(const char *message)
 {
     if (currentState != CONNECTED)
     {
@@ -157,7 +159,7 @@ int ZohoIOTClient::publish(char *message)
     }
 }
 
-int ZohoIOTClient::publishCommandAck(char *correlation_id, commandAckResponseCodes status_code, char *responseMessage)
+int8_t ZohoIOTClient::publishCommandAck(const char *correlation_id, commandAckResponseCodes status_code, const char *responseMessage)
 {
     if (currentState != CONNECTED)
     {
@@ -188,7 +190,7 @@ int ZohoIOTClient::publishCommandAck(char *correlation_id, commandAckResponseCod
     }
 }
 
-int ZohoIOTClient::dispatch()
+int8_t ZohoIOTClient::dispatch()
 {
     //Form json payload and publish to HUB...
     if (currentState != CONNECTED)
@@ -209,7 +211,7 @@ void ZohoIOTClient::addConnectionParameter(char *connectionParamKey, char *conne
     sprintf(connectionStringBuff, "%s%s%s%s%s", connectionStringBuff, connectionParamKey, "=", connectionParamValue, "&");
 }
 
-char *ZohoIOTClient::formConnectionString(char *username)
+char *ZohoIOTClient::formConnectionString(const char *username)
 {
     sprintf(connectionStringBuff, "%s%s", username, "?");
     addConnectionParameter((char *)"sdk_name", sdk_name);
@@ -219,7 +221,71 @@ char *ZohoIOTClient::formConnectionString(char *username)
     return connectionStringBuff;
 }
 
-int ZohoIOTClient::connect()
+int16_t getRetryInterval(unsigned long *curr_retry_interval)
+{
+    if (*curr_retry_interval <= 0)
+    {
+        *curr_retry_interval = MIN_RETRY_INTERVAL;
+    }
+    if (*curr_retry_interval < MAX_RETRY_INTERVAL)
+    {
+        *curr_retry_interval = *curr_retry_interval * 2;
+    }
+    else
+    {
+        *curr_retry_interval = MAX_RETRY_INTERVAL;
+    }
+    return *curr_retry_interval;
+}
+
+int8_t ZohoIOTClient::reconnect()
+{
+    if (currentState < INITIALIZED)
+    {
+        return CLIENT_ERROR;
+    }
+
+    if (_mqtt_client->connected())
+    {
+        //Already having an active connecting with HUB... No job to do here..
+        currentState = CONNECTED;
+        return SUCCESS;
+    }
+    if (start_time <= 0)
+    {
+        start_time = millis();
+    }
+
+    if (millis() - start_time > current_retry_interaval * 1000)
+    {
+        // Serial.println("trying to reconnect");
+        int rc = connect();
+        if (rc == SUCCESS)
+        {
+            // Serial.println("connected");
+            currentState = CONNECTED;
+            retryCount = 0;
+            current_retry_interaval = (unsigned long)MIN_RETRY_INTERVAL;
+            start_time = 0;
+            return SUCCESS;
+        }
+        start_time = millis();
+        current_retry_interaval = getRetryInterval(&current_retry_interaval);
+        retryCount = retryCount + 1;
+        // Serial.println("current time");
+        // Serial.println(millis());
+        // Serial.print("Retrying in ");
+        // Serial.print((int)current_retry_interaval);
+        // Serial.println(" seconds");
+        if (currentState != DISCONNECTED && currentState != CONNECTED)
+        {
+            return CLIENT_ERROR;
+        }
+    }
+    return FAILURE;
+}
+
+int8_t ZohoIOTClient::connect()
 {
     //TODO: Empty validation
     //TODO: resubscribe old subscriptions if reconnecting.
@@ -234,34 +300,17 @@ int ZohoIOTClient::connect()
         currentState = CONNECTED;
         return SUCCESS;
     }
-    // Serial.println("Connecting..");
-    while (!_mqtt_client->connected())
+    _mqtt_client->connect(_client_id, formConnectionString(_mqtt_user_name), _mqtt_password);
+    if (_mqtt_client->connected())
     {
-        _mqtt_client->connect(_client_id, formConnectionString(_mqtt_user_name), _mqtt_password);
-        if (retryCount > _retry_limit)
-        {
-            currentState = RETRYING;
-            break;
-        }
-        if (_mqtt_client->connected())
-        {
-            retryCount = 0;
-            currentState = CONNECTED;
-            return SUCCESS;
-        }
-        else
-        {
-            //Serial.print("RetryCount: ");
-            // Serial.println(retryCount);
-            // Serial.print("Failed. rc:");
-            // Serial.print(_mqtt_client.state());
-            // Serial.println(" Retry in 5 seconds");
-            delay(5000);
-            currentState = RETRYING;
-            retryCount++;
-        }
+        currentState = CONNECTED;
+        return SUCCESS;
     }
-    return CLIENT_ERROR;
+    else
+    {
+        currentState = RETRYING;
+        return FAILURE;
+    }
 }
 
 void ZohoIOTClient::onMessageReceived(char *topic, uint8_t *payload, unsigned int length)
@@ -269,10 +318,10 @@ void ZohoIOTClient::onMessageReceived(char *topic, uint8_t *payload, unsigned in
     DynamicJsonBuffer on_message_handler_buffer, ack_message_buffer;
     char payload_msg[length + 1];
     uint8_t frwd_payload[length];
-    int len = strlen(topic);
+    uint8_t len = strlen(topic);
     char frwd_topic[len];
     strcpy(frwd_topic, topic);
-    for (int itr = 0; itr < (int)length; itr++)
+    for (unsigned int itr = 0; itr < length; itr++)
     {
         frwd_payload[itr] = payload[itr];
         payload_msg[itr] = (char)payload[itr];
@@ -301,7 +350,7 @@ void ZohoIOTClient::onMessageReceived(char *topic, uint8_t *payload, unsigned in
     this->callback(frwd_topic, frwd_payload, length);
 }
 
-int ZohoIOTClient::subscribe(MQTT_CALLBACK_SIGNATURE)
+int8_t ZohoIOTClient::subscribe(MQTT_CALLBACK_SIGNATURE)
 {
     //Subscribe to topic and set method to be called message on that topic.
     //TODO: Empty validation
@@ -327,7 +376,7 @@ int ZohoIOTClient::subscribe(MQTT_CALLBACK_SIGNATURE)
     return SUCCESS;
 }
 
-int ZohoIOTClient::disconnect()
+int8_t ZohoIOTClient::disconnect()
 {
     if (_mqtt_client->connected())
     {
