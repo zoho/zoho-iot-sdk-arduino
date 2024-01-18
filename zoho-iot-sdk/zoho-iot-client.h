@@ -22,6 +22,8 @@
 #define COMMAND_RECIEVED_ACK_CODE 1000
 #define MAX_RETRY_INTERVAL 1800
 #define MIN_RETRY_INTERVAL 2
+#define MAX_PAYLOAD_SIZE (int)100000
+#define DEFAULT_PAYLOAD_SIZE (int)32000
 
 using namespace std;
 
@@ -63,10 +65,10 @@ private:
   const uint16_t _retry_limit = 5;
   clientState currentState;
   uint16_t retryCount = 0;
+  JsonDocument root;
+  JsonDocument eventDataObject;
 
-  DynamicJsonBuffer jsonBuffer;
-  JsonObject &root = jsonBuffer.createObject();
-  JsonObject &eventDataObject = jsonBuffer.createObject();
+
   template <typename T>
   inline bool addDataPoint(const char *key, T val, const char *assetName)
   {
@@ -78,9 +80,9 @@ private:
     {
       if (!root.containsKey(assetName))
       {
-        root.createNestedObject(assetName);
+        root[assetName].to<JsonObject>();
       }
-      JsonObject &obj = root[assetName];
+      JsonObject obj = root[assetName];
       obj[key] = val;
     }
     else
@@ -153,6 +155,7 @@ public:
   int8_t init(const char *mqttUserName, const char *mqttPassword);
   void addConnectionParameter(char *connectionParamKey, char *connectionParamValue);
   int8_t connect();
+  int8_t setMaxPayloadSize(int size);
   int8_t publish(const char *message);
   int8_t dispatch();
   int8_t dispatchEventFromJSONString(const char *eventType, const char *eventDescription, char *eventDataJSONString, const char *assetName);

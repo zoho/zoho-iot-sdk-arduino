@@ -13,7 +13,8 @@ WiFiClientSecure espClient;
 ZohoIOTClient zc(&espClient, true);
 const long interval = 2000;
 ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESFULLY_EXECUTED;
-char *sub_topic = strcat(strcat("/devices/", CLIENT_ID), "/commands");
+String sub_topic = "/devices/" + String(CLIENT_ID) + "/commands";
+const char *comm_topic = sub_topic.c_str();
 // To securely connect with finger print verification , uncomment finger print and comment CA certificate.
 // const char fingerPrint[] ="AA BB CC DD EE FF 00 11 22 33 44 55 66 77 88 99 AA BB CC DD";
 const char *local_root_ca = "-----BEGIN CERTIFICATE-----\n"
@@ -67,14 +68,14 @@ void on_message(char *topic, byte *payload, unsigned int length)
     Serial.println();
     if (strcmp(topic, comm_topic) == 0)
     {
-        DynamicJsonBuffer on_msg_buff;
-        JsonArray &commandMessageArray = on_msg_buff.parseArray(msg);
-        int msglength = commandMessageArray.measureLength();
+        JsonDocument commandMessageArray;
+        deserializeJson(commandMessageArray,msg);
+        int msglength = commandMessageArray.size();
         char response_msg[] = "Successfully completed the operation";
         for (int itr = 0; itr < msglength; itr++)
         {
-            JsonObject &commandMessageObj = commandMessageArray.get<JsonObject>(itr);
-            const char *correlation_id = commandMessageObj.get<const char *>("correlation_id");
+            JsonObject commandMessageObj = commandMessageArray[itr];
+            const char *correlation_id = commandMessageObj["correlation_id"];
             zc.publishCommandAck(correlation_id, success_response_code, response_msg);
         }
     }

@@ -8,12 +8,14 @@
 #define MQTT_PASSWORD (char *)"mqtt_password"
 #define CLIENT_ID (char *)"client_id"
 
-WiFiClientSecure espClient;
+WiFiClient espClient;
 ZohoIOTClient zc(&espClient, false);
 const long interval = 1000;
+String sub_topic = "/devices/" + String(CLIENT_ID) + "/commands";
+const char *comm_topic = sub_topic.c_str();
+
 ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESFULLY_EXECUTED;
 
-char *comm_topic = strcat(strcat("/devices/", CLIENT_ID), "/commands");
 void setup_wifi()
 {
     if (WiFi.status() == WL_CONNECTED)
@@ -60,14 +62,14 @@ void on_message(char *topic, byte *payload, unsigned int length)
     Serial.println();
     if (strcmp(topic, comm_topic) == 0)
     {
-        DynamicJsonBuffer on_msg_buff;
-        JsonArray &commandMessageArray = on_msg_buff.parseArray(msg);
-        int msglength = commandMessageArray.measureLength();
+        JsonDocument doc;
+        deserializeJson(doc,msg);
+        int msglength = doc.size();
         char response_msg[] = "Successfully completed the operation";
         for (int itr = 0; itr < msglength; itr++)
         {
-            JsonObject &commandMessageObj = commandMessageArray.get<JsonObject>(itr);
-            const char *correlation_id = commandMessageObj.get<const char *>("correlation_id");
+            JsonObject commandMessageObj = doc[itr];
+            const char *correlation_id = commandMessageObj["correlation_id"];
             zc.publishCommandAck(correlation_id, success_response_code, response_msg);
         }
     }

@@ -64,9 +64,11 @@ int8_t ZohoIOTClient::init(const char *mqttUserName, const char *mqttPassword)
 
 int8_t ZohoIOTClient::dispatchEventFromEventDataObject(const char *eventType, const char *eventDescription, const char *assetName)
 {
-    int size = eventDataObject.measureLength() + 1;
+    String jsonString;
+    serializeJson(eventDataObject, jsonString);
+    int size = jsonString.length()+1;
     char eventDataJSONString[size];
-    eventDataObject.printTo(eventDataJSONString, size);
+    jsonString.toCharArray(eventDataJSONString,size);
     return dispatchEventFromJSONString(eventType, eventDescription, eventDataJSONString, assetName);
 }
 
@@ -89,39 +91,45 @@ int8_t ZohoIOTClient::dispatchEventFromJSONString(const char *eventType, const c
         return FAILURE;
     }
 
-    DynamicJsonBuffer event_dispatch_buffer, event_data_buffer;
-    JsonObject &eventObject = event_dispatch_buffer.createObject();
+    JsonDocument event_dispatch_doc;
+    JsonDocument event_object_doc;
+    JsonDocument event_data_doc;
+    JsonObject eventObject = event_object_doc.to<JsonObject>();
     eventObject["event_type"] = eventType;
     eventObject["event_descr"] = eventDescription;
-    JsonObject &parsed_event_Data = event_data_buffer.parseObject(eventDataJSONString);
-    if (!parsed_event_Data.success())
+    DeserializationError error = deserializeJson(event_data_doc, eventDataJSONString);
+    if (error != DeserializationError::Ok)
     {
         return FAILURE;
     }
-    eventObject["event_data"] = parsed_event_Data;
+    eventObject["event_data"] = event_data_doc;
     int size;
     bool pub_status = false;
     if (!checkStringIsValid(assetName))
     {
-        size = eventObject.measureLength() + 1;
+        String jsonString;
+        serializeJson(eventObject, jsonString);
+        int size = jsonString.length()+1;
         char payloadMsg[size];
-        eventObject.printTo(payloadMsg, size);
+        jsonString.toCharArray(payloadMsg,size);
         pub_status = _mqtt_client->publish(_event_topic, payloadMsg);
         eventObject.remove("event_type");
         eventObject.remove("event_data");
         eventObject.remove("event_descr");
-        event_data_buffer.clear();
+        event_data_doc.clear();
     }
     else
     {
-        JsonObject &eventDisptachObject = event_dispatch_buffer.createObject();
+        JsonObject eventDisptachObject = event_dispatch_doc.to<JsonObject>();
         eventDisptachObject[assetName] = eventObject;
-        size = eventDisptachObject.measureLength() + 1;
+        String jsonString;
+        serializeJson(eventDisptachObject, jsonString);
+        int size = jsonString.length()+1;
         char payloadMsg[size];
-        eventDisptachObject.printTo(payloadMsg, size);
+        jsonString.toCharArray(payloadMsg,size);
         pub_status = _mqtt_client->publish(_event_topic, payloadMsg);
         eventDisptachObject.remove(assetName);
-        event_dispatch_buffer.clear();
+        event_dispatch_doc.clear();
     }
     if (pub_status == true)
     {
@@ -171,15 +179,16 @@ int8_t ZohoIOTClient::publishCommandAck(const char *correlation_id, commandAckRe
         return FAILURE;
     }
 
-    DynamicJsonBuffer command_ack_buffer;
-    JsonObject &commandAckMessageObj = command_ack_buffer.createObject();
-    JsonObject &commandAckObject = command_ack_buffer.createObject();
-    commandAckMessageObj[correlation_id] = commandAckObject;
+    JsonDocument command_ack_message_doc;
+    JsonObject commandAckMessageObj = command_ack_message_doc.to<JsonObject>();
+    JsonObject commandAckObject = commandAckMessageObj[correlation_id].to<JsonObject>();
     commandAckObject["status"] = (int)status_code;
     commandAckObject["response"] = responseMessage;
-    int size = commandAckMessageObj.measureLength();
+    String jsonString;
+    serializeJson(commandAckMessageObj, jsonString);
+    int size = jsonString.length()+1;
     char payloadMsg[size];
-    commandAckMessageObj.printTo(payloadMsg, size);
+    jsonString.toCharArray(payloadMsg,size);
     if (_mqtt_client->publish(_command_ack_topic, payloadMsg) == true)
     {
         return SUCCESS;
@@ -197,12 +206,14 @@ int8_t ZohoIOTClient::dispatch()
     {
         return CLIENT_ERROR;
     }
-    int size = root.measureLength() + 1;
+    String jsonString;
+    serializeJson(root, jsonString);
+    int size = jsonString.length() + 1;
     char payloadMsg[size];
-    root.printTo(payloadMsg, size);
+    jsonString.toCharArray(payloadMsg,size);
     //TODO: remove below debug message(payload message).
-    // Serial.print("Payload message : ");
-    // Serial.println(payloadMsg);
+    //Serial.print("Payload message : ");
+    //Serial.println(payloadMsg);
 
     return publish(payloadMsg);
 }
@@ -236,6 +247,24 @@ int16_t getRetryInterval(unsigned long *curr_retry_interval)
         *curr_retry_interval = MAX_RETRY_INTERVAL;
     }
     return *curr_retry_interval;
+}
+int8_t ZohoIOTClient::setMaxPayloadSize(int size)
+{
+ if(size > MAX_PAYLOAD_SIZE)
+ {
+    _mqtt_client->setBufferSize(MAX_PAYLOAD_SIZE);
+    return FAILURE;
+ }
+ else if (size<DEFAULT_PAYLOAD_SIZE)
+ {
+    _mqtt_client->setBufferSize(DEFAULT_PAYLOAD_SIZE);
+    return FAILURE;
+ }
+ else
+ {
+    _mqtt_client->setBufferSize(size);
+    return SUCCESS;
+ }
 }
 
 int8_t ZohoIOTClient::reconnect()
@@ -315,7 +344,8 @@ int8_t ZohoIOTClient::connect()
 
 void ZohoIOTClient::onMessageReceived(char *topic, uint8_t *payload, unsigned int length)
 {
-    DynamicJsonBuffer on_message_handler_buffer, ack_message_buffer;
+    JsonDocument on_message_handler_buffer;
+    JsonDocument ack_message_buffer;
     char payload_msg[length + 1];
     uint8_t frwd_payload[length];
     uint8_t len = strlen(topic);
@@ -328,21 +358,29 @@ void ZohoIOTClient::onMessageReceived(char *topic, uint8_t *payload, unsigned in
     }
     if (strcmp(topic, _command_topic) == 0)
     {
-        JsonArray &commandMessageArray = on_message_handler_buffer.parseArray(payload_msg);
-        int msglength = commandMessageArray.measureLength();
-        JsonObject &commandAckMessage = ack_message_buffer.createObject();
+        DeserializationError error = deserializeJson(on_message_handler_buffer,payload_msg);
+        if (error != DeserializationError::Ok)
+        {
+            Serial.print("Cannot able to deserialize the received Message");
+            return;
+        }
+        JsonArray commandMessageArray = on_message_handler_buffer.as<JsonArray>();
+        int msglength = commandMessageArray.size();
+        JsonObject commandAckMessage = ack_message_buffer.to<JsonObject>();
         for (int itr = 0; itr < msglength; itr++)
         {
-            JsonObject &commandMessageObj = commandMessageArray.get<JsonObject>(itr);
-            const char *correlation_id = commandMessageObj.get<const char *>("correlation_id");
-            JsonObject &object = ack_message_buffer.createObject();
+            JsonDocument object;
+            JsonObject commandMessageObj = commandMessageArray[itr];
+            const char *correlation_id = commandMessageObj["correlation_id"];
             object["status_code"] = COMMAND_RECIEVED_ACK_CODE;
             object["response"] = "";
             commandAckMessage[correlation_id] = object;
         }
-        int size = commandAckMessage.measureLength() + 1;
+        String jsonString;
+        serializeJson(commandAckMessage, jsonString);
+        int size = jsonString.length() + 1;
         char commandAckMessageString[size];
-        commandAckMessage.printTo(commandAckMessageString, size);
+        jsonString.toCharArray(commandAckMessageString,size);
         _mqtt_client->publish(_command_ack_topic, commandAckMessageString);
         on_message_handler_buffer.clear();
         ack_message_buffer.clear();
