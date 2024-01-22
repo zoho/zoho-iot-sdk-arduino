@@ -4,43 +4,14 @@
 #define ssid "Wifi_ssid"
 #define password "Wifi_password"
 
-WiFiClientSecure espClient;
-ZohoIOTClient zc(&espClient, true);
-const char fingerPrint[] = "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD";
 #define MQTT_USERNAME (char *)"/mqtt_domain_name/v1/devices/client_id/connect"
 #define MQTT_PASSWORD (char *)"mqtt_password"
-#define CLIENT_ID (char *)"client_id"
 
+WiFiClient espClient;
+ZohoIOTClient zc(&espClient, false);
 const long interval = 1000;
+
 ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESFULLY_EXECUTED;
-char *sub_topic = strcat(strcat("/devices/", CLIENT_ID), "/commands");
-void on_message(char *topic, byte *payload, unsigned int length)
-{
-    Serial.println("new message recieved");
-    String msg = "";
-    for (unsigned int itr = 0; itr < length; itr++)
-    {
-        msg += (char)payload[itr];
-    }
-    Serial.print("[ ");
-    Serial.print(topic);
-    Serial.print(" ] : ");
-    Serial.print(msg);
-    Serial.println();
-    if (strcmp(topic, comm_topic) == 0)
-    {
-        DynamicJsonBuffer on_msg_buff;
-        JsonArray &commandMessageArray = on_msg_buff.parseArray(msg);
-        int msglength = commandMessageArray.measureLength();
-        char response_msg[] = "Successfully completed the operation";
-        for (int itr = 0; itr < msglength; itr++)
-        {
-            JsonObject &commandMessageObj = commandMessageArray.get<JsonObject>(itr);
-            const char *correlation_id = commandMessageObj.get<const char *>("correlation_id");
-            zc.publishCommandAck(correlation_id, success_response_code, response_msg);
-        }
-    }
-}
 
 void setup_wifi()
 {
@@ -54,6 +25,7 @@ void setup_wifi()
     Serial.println();
     Serial.print("Connecting to ");
     Serial.println(ssid);
+
     WiFi.mode(WIFI_STA);
     WiFi.disconnect(true);
     WiFi.persistent(false);
@@ -72,13 +44,43 @@ void setup_wifi()
     Serial.println(WiFi.localIP());
 }
 
+void on_message(char *topic, uint8_t *payload, unsigned int length)
+{
+    Serial.println("new message recieved");
+    String msg = "";
+    for (unsigned int itr = 0; itr < length; itr++)
+    {
+        msg += (char)payload[itr];
+    }
+    Serial.print("[ ");
+    Serial.print(topic);
+    Serial.print(" ] : ");
+    Serial.print(msg);
+    Serial.println();
+    std::string myString;
+    zc.get_command_topic(myString);
+    const char *comm_topic = myString.c_str();
+
+    if (strcmp(topic, comm_topic) == 0)
+    {
+        JsonDocument doc;
+        deserializeJson(doc,msg);
+        int msglength = doc.size();
+        char response_msg[] = "Successfully completed the operation";
+        for (int itr = 0; itr < msglength; itr++)
+        {
+            JsonObject commandMessageObj = doc[itr];
+            const char *correlation_id = commandMessageObj["correlation_id"];
+            zc.publishCommandAck(correlation_id, success_response_code, response_msg);
+        }
+    }
+}
+
 void setup()
 {
     Serial.begin(115200);
     Serial.println("Booting Up!");
-    delay(5000);
     setup_wifi();
-    espClient.setFingerprint(fingerPrint);
     zc.init(MQTT_USERNAME, MQTT_PASSWORD);
     zc.connect();
     zc.subscribe(on_message);
@@ -99,9 +101,8 @@ void loop()
             prev_time = current_time;
             zc.addDataPointNumber("voltage", rand() / 100);
             zc.addDataPointNumber("current", rand() / 300);
-            Serial.print("dispatch:");
-            Serial.println(zc.dispatch());
-            Serial.println(millis());
+            Serial.println("dispatch:");
+            zc.dispatch();
         }
         else
         {
