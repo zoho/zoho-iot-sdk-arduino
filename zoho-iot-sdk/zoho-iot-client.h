@@ -162,6 +162,7 @@ public:
   int8_t dispatchEventFromEventDataObject(const char *eventType, const char *eventDescription, const char *assetName);
   int8_t publishCommandAck(const char *correlation_id, commandAckResponseCodes status_code, const char *responseMessage);
   int8_t subscribe(MQTT_CALLBACK_SIGNATURE);
+  int8_t get_command_topic(std::string& command_topic_string);
   int8_t reconnect();
   int8_t disconnect();
   inline bool isConnected()

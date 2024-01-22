@@ -182,7 +182,7 @@ int8_t ZohoIOTClient::publishCommandAck(const char *correlation_id, commandAckRe
     JsonDocument command_ack_message_doc;
     JsonObject commandAckMessageObj = command_ack_message_doc.to<JsonObject>();
     JsonObject commandAckObject = commandAckMessageObj[correlation_id].to<JsonObject>();
-    commandAckObject["status"] = (int)status_code;
+    commandAckObject["status_code"] = (int)status_code;
     commandAckObject["response"] = responseMessage;
     String jsonString;
     serializeJson(commandAckMessageObj, jsonString);
@@ -296,6 +296,7 @@ int8_t ZohoIOTClient::reconnect()
             retryCount = 0;
             current_retry_interaval = (unsigned long)MIN_RETRY_INTERVAL;
             start_time = 0;
+            _mqtt_client->subscribe(_command_topic);
             return SUCCESS;
         }
         start_time = millis();
@@ -411,6 +412,14 @@ int8_t ZohoIOTClient::subscribe(MQTT_CALLBACK_SIGNATURE)
     {
         return FAILURE;
     }
+    return SUCCESS;
+}
+int8_t ZohoIOTClient::get_command_topic(std::string& command_topic_string)
+{
+    if (currentState == NOT_INITIALIZED){
+        return FAILURE ;
+    }
+    command_topic_string.assign(_command_topic);
     return SUCCESS;
 }
 

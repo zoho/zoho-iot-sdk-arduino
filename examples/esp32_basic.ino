@@ -6,13 +6,10 @@
 
 #define MQTT_USERNAME (char *)"/mqtt_domain_name/v1/devices/client_id/connect"
 #define MQTT_PASSWORD (char *)"mqtt_password"
-#define CLIENT_ID (char *)"client_id"
 
 WiFiClient espClient;
 ZohoIOTClient zc(&espClient, false);
 const long interval = 1000;
-String sub_topic = "/devices/" + String(CLIENT_ID) + "/commands";
-const char *comm_topic = sub_topic.c_str();
 
 ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESFULLY_EXECUTED;
 
@@ -60,6 +57,10 @@ void on_message(char *topic, byte *payload, unsigned int length)
     Serial.print(" ] : ");
     Serial.print(msg);
     Serial.println();
+    std::string myString;
+    zc.get_command_topic(myString);
+    const char *comm_topic = myString.c_str();
+
     if (strcmp(topic, comm_topic) == 0)
     {
         JsonDocument doc;
