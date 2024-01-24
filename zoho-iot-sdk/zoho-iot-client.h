@@ -112,6 +112,7 @@ private:
   bool extractMqttServerAndDeviceDetails(const string &mqttUserName);
   char *formConnectionString(const char *username);
   void onMessageReceived(char *topic, uint8_t *payload, unsigned int length);
+  void addConnectionParameter(char *connectionParamKey, char *connectionParamValue);
   MQTT_CALLBACK_SIGNATURE;
   inline bool checkStringIsValid(const char *value)
   {
@@ -153,7 +154,6 @@ public:
   }
   inline ~ZohoIOTClient() {}
   int8_t init(const char *mqttUserName, const char *mqttPassword);
-  void addConnectionParameter(char *connectionParamKey, char *connectionParamValue);
   int8_t connect();
   int8_t setMaxPayloadSize(int size);
   int8_t publish(const char *message);
