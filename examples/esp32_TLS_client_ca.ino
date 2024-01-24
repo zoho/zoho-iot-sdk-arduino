@@ -2,18 +2,17 @@
 #include <Arduino.h>
 #include <WiFiClientSecure.h>
 #include <zoho-iot-client.h>
-#define ssid "Wifi_ssid"
-#define password "Wifi_password"
+#define SSID "Wifi_ssid"
+#define PASSWORD "Wifi_password"
 
 #define MQTT_USERNAME (char *)"/mqtt_domain_name/v1/devices/client_id/connect"
 #define MQTT_PASSWORD (char *)"mqtt_password"
 
 WiFiClientSecure espClient;
-ZohoIOTClient zc(&espClient, true);
+ZohoIOTClient zClient(&espClient, true);
 const long interval = 2000;
 ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESFULLY_EXECUTED;
-// To securely connect with finger print verification , uncomment finger print and comment CA certificate.
-// const char fingerPrint[] ="AA BB CC DD EE FF 00 11 22 33 44 55 66 77 88 99 AA BB CC DD";
+unsigned long prev_time = 0, current_time = 0;
 const char* client_cert = "-----BEGIN CERTIFICATE-----\n"
                           "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n"
                           "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n"
@@ -135,11 +134,11 @@ void on_message(char *topic, byte *payload, unsigned int length)
     Serial.print(" ] : ");
     Serial.print(msg);
     Serial.println();
-    std::string myString;
-    zc.get_command_topic(myString);
-    const char *comm_topic = myString.c_str();
+    string command_topic_string;
+    zClient.get_command_topic(command_topic_string);
+    const char *command_topic = command_topic_string.c_str();
 
-    if (strcmp(topic, comm_topic) == 0)
+    if (strcmp(topic, command_topic) == 0)
     {
         JsonDocument commandMessageArray;
         deserializeJson(commandMessageArray,msg);
@@ -149,7 +148,7 @@ void on_message(char *topic, byte *payload, unsigned int length)
         {
             JsonObject commandMessageObj = commandMessageArray[itr];
             const char *correlation_id = commandMessageObj["correlation_id"];
-            zc.publishCommandAck(correlation_id, success_response_code, response_msg);
+            zClient.publishCommandAck(correlation_id, success_response_code, response_msg);
         }
     }
 }
@@ -187,36 +186,33 @@ void setup()
 {
     Serial.begin(115200);
     Serial.println("Booting Up!");
-    delay(5000);
     setup_wifi();
     espClient.setCertificate(client_cert);
     espClient.setPrivateKey(private_key);
     espClient.setCACert(local_root_ca);
     // To connect securely using Fingerprint verification remove CA certificate and add verify method.
     // espClient.verify(fingerPrint,hostname);
-    zc.init(MQTT_USERNAME, MQTT_PASSWORD);
-    zc.connect();
-    zc.subscribe(on_message);
+    zClient.init(MQTT_USERNAME, MQTT_PASSWORD);
+    zClient.connect();
+    zClient.subscribe(on_message);
     Serial.println("Ready!");
 }
 
-unsigned long prev_time = 0, current_time = 0;
 void loop()
 {
     //Watchdog for Wifi & MQTT connection status.
     //Automatically reconnect in case of connection failure.
     setup_wifi();
-    zc.reconnect();
+    zClient.reconnect();
     if ((current_time = millis()) - prev_time >= interval)
     {
-        if (zc.isConnected())
+        if (zClient.isConnected())
         {
             prev_time = current_time;
-            zc.addDataPointNumber("voltage", rand() / 100);
-            zc.addDataPointNumber("current", rand() / 300);
+            zClient.addDataPointNumber("voltage", rand() / 100);
+            zClient.addDataPointNumber("current", rand() / 300);
             Serial.print("dispatch:");
-            Serial.println(zc.dispatch());
-            Serial.println(millis());
+            Serial.println(zClient.dispatch());
         }
         else
         {
@@ -224,5 +220,5 @@ void loop()
             // Write your Own persistance logic to store and publish data.
         }
     }
-    zc.zyield();
+    zClient.zyield();
 }

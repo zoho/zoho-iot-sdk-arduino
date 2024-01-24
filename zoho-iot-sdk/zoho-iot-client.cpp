@@ -414,7 +414,7 @@ int8_t ZohoIOTClient::subscribe(MQTT_CALLBACK_SIGNATURE)
     }
     return SUCCESS;
 }
-int8_t ZohoIOTClient::get_command_topic(std::string& command_topic_string)
+int8_t ZohoIOTClient::get_command_topic(string& command_topic_string)
 {
     if (currentState == NOT_INITIALIZED){
         return FAILURE ;
