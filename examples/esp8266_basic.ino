@@ -1,4 +1,4 @@
-#include <WiFi.h>
+#include <ESP8266WiFi.h>
 #include <zoho-iot-client.h>
 
 #define SSID "Wifi_ssid"
@@ -45,7 +45,7 @@ void setup_wifi()
     Serial.println(WiFi.localIP());
 }
 
-void on_message(char *topic, byte *payload, unsigned int length)
+void on_message(char *topic, uint8_t *payload, unsigned int length)
 {
     Serial.println("new message recieved");
     String msg = "";
@@ -101,7 +101,7 @@ void loop()
             prev_time = current_time;
             zClient.addDataPointNumber("voltage", rand() / 100);
             zClient.addDataPointNumber("current", rand() / 300);
-            Serial.print("dispatch:");
+            Serial.println("dispatch:");
             Serial.println(zClient.dispatch());
         }
         else
