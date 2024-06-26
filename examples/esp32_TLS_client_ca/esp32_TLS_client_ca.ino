@@ -121,7 +121,7 @@ const char *local_root_ca = "-----BEGIN CERTIFICATE-----\n"
                             "xxxxxxxxxxxxxxxxxxxxxxxxxxxx\n"
                             "-----END CERTIFICATE-----";
 
-void on_message(char *topic, byte *payload, unsigned int length)
+void on_message(char *topic, uint8_t *payload, unsigned int length)
 {
     Serial.println("new message recieved");
     String msg = "";
@@ -164,11 +164,11 @@ void setup_wifi()
     //Connecting to a WiFi network
     Serial.println();
     Serial.print("Connecting to ");
-    Serial.println(ssid);
+    Serial.println(SSID);
     WiFi.mode(WIFI_STA);
     WiFi.disconnect(true);
     WiFi.persistent(false);
-    WiFi.begin(ssid, password);
+    WiFi.begin(SSID, PASSWORD);
     delay(10);
     while (WiFi.status() != WL_CONNECTED)
     {

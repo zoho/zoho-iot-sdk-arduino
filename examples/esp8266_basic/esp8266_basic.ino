@@ -25,12 +25,12 @@ void setup_wifi()
     //Connecting to a WiFi network
     Serial.println();
     Serial.print("Connecting to ");
-    Serial.println(ssid);
+    Serial.println(SSID);
 
     WiFi.mode(WIFI_STA);
     WiFi.disconnect(true);
     WiFi.persistent(false);
-    WiFi.begin(ssid, password);
+    WiFi.begin(SSID, PASSWORD);
 
     delay(10);
     while (WiFi.status() != WL_CONNECTED)

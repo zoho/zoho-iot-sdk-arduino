@@ -52,7 +52,7 @@ const char *local_root_ca = "-----BEGIN CERTIFICATE-----\n"
                             "xxxxxxxxxxxxxxxxxxxxxxxxxxxx\n"
                             "-----END CERTIFICATE-----";
 
-void on_message(char *topic, byte *payload, unsigned int length)
+void on_message(char *topic, uint8_t *payload, unsigned int length)
 {
     Serial.println("new message recieved");
     String msg = "";
