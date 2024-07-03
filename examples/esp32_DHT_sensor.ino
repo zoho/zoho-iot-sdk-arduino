@@ -1,4 +1,4 @@
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
 #include <zoho-iot-client.h>
 
 #define SSID "Wifi_ssid"
@@ -6,6 +6,14 @@
 
 #define MQTT_USERNAME (char *)"/mqtt_domain_name/v1/devices/client_id/connect"
 #define MQTT_PASSWORD (char *)"mqtt_password"
+
+#include "DHT.h"
+
+#define DHTPIN 4
+
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
 
 WiFiClient espClient;
 ZohoIOTClient zClient(&espClient, false);
@@ -86,23 +94,32 @@ void setup()
     zClient.connect();
     zClient.subscribe(on_message);
     Serial.println("Ready!");
+    dht.begin();
 }
 
 void loop()
 {
-    //Watchdog for Wifi & MQTT connection status.
-    //Automatically reconnect in case of connection failure.
     setup_wifi();
     zClient.reconnect();
     if ((current_time = millis()) - prev_time >= interval)
     {
-        if (zClient.isConnected())
-        {
+          if (zClient.isConnected())
+          {
+            float humidity = dht.readHumidity(true);
+            // Read temperature as Celsius (the default)
+            float temperature = dht.readTemperature(true);
+            // Read temperature as Fahrenheit (isFahrenheit = true)
+    
+            // Check if any reads failed and exit early (to try again).
+            if (isnan(humidity) || isnan(temperature) ) {
+              Serial.println(F("Failed to read from DHT sensor!"));
+              return;
+            }
             prev_time = current_time;
-            zClient.addDataPointNumber("voltage", rand() / 100);
-            zClient.addDataPointNumber("current", rand() / 300);
-            Serial.println("dispatch:");
-            Serial.println(zClient.dispatch());
+            zClient.addDataPointNumber("humidity", humidity);
+            zClient.addDataPointNumber("temperature", temperature);
+            Serial.println("dispatch");
+            zClient.dispatch();
         }
         else
         {
