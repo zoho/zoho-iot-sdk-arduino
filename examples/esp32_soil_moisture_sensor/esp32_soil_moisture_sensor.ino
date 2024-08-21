@@ -96,6 +96,8 @@ void on_message(char *topic, uint8_t *payload, unsigned int length) {
 void setup() {
   Serial.begin(115200);
   Serial.println("Booting Up!");
+  pinMode(RelayPin,OUTPUT);
+  digitalWrite(RelayPin,HIGH);
   setup_wifi();
   zClient.init(MQTT_USERNAME, MQTT_PASSWORD);
   zClient.connect();
@@ -104,8 +106,6 @@ void setup() {
 }
 
 void loop() {
-  pinMode(RelayPin,OUTPUT);
-  digitalWrite(RelayPin,HIGH);
   setup_wifi();
   zClient.reconnect();
   if ((current_time = millis()) - prev_time >= interval) {
@@ -115,7 +115,7 @@ void loop() {
       Serial.println("Reading from soil moisture sensor");
       for(int i = 0; i < numberOfSamples ; i++){
         sensor_analog = sensor_analog + analogRead(soilMoistureSensorPin);
-        delay(500);
+        delay(100);
         Serial.print(".");
       }
       Serial.println();
