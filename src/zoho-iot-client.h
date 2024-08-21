@@ -227,5 +227,6 @@ public:
   {
     return addDataPoint(key, "<ERROR>", assetName);
   }
+  string getPayload();
 };
 #endif
