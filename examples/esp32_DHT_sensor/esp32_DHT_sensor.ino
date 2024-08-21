@@ -9,7 +9,7 @@
 
 #include "DHT.h"
 
-#define DHTPIN 4
+#define DHTPIN 13
 
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
@@ -17,7 +17,7 @@ DHT dht(DHTPIN, DHTTYPE);
 
 WiFiClient espClient;
 ZohoIOTClient zClient(&espClient, false);
-const long interval = 1000;
+const long interval = 10000;
 
 ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESFULLY_EXECUTED;
 unsigned long prev_time = 0, current_time = 0;
@@ -118,13 +118,11 @@ void loop()
             prev_time = current_time;
             zClient.addDataPointNumber("humidity", humidity);
             zClient.addDataPointNumber("temperature", temperature);
-            Serial.println("dispatch");
-            zClient.dispatch();
-        }
-        else
-        {
-            Serial.println("Persist polled datapoints");
-            // Write your Own persistance logic to store and publish data.
+            String payload = zClient.getPayload().c_str();
+            Serial.println("dispatching message: " + payload);
+            if (zClient.dispatch() == zClient.SUCCESS) {
+                Serial.println("Message published successfully");
+            }
         }
     }
     zClient.zyield();

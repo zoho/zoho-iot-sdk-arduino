@@ -101,13 +101,11 @@ void loop()
             prev_time = current_time;
             zClient.addDataPointNumber("voltage", rand() / 100);
             zClient.addDataPointNumber("current", rand() / 300);
-            Serial.print("dispatch:");
-            Serial.println(zClient.dispatch());
-        }
-        else
-        {
-            Serial.println("Persist polled datapoints");
-            // Write your Own persistance logic to store and publish data.
+            String payload = zClient.getPayload().c_str();
+            Serial.println("dispatching message: " + payload);
+            if (zClient.dispatch() == zClient.SUCCESS) {
+                Serial.println("Message published successfully");
+            }
         }
     }
     zClient.zyield();
