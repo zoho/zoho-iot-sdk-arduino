@@ -115,7 +115,7 @@ void loop() {
       Serial.println("Reading from soil moisture sensor");
       for(int i = 0; i < numberOfSamples ; i++){
         sensor_analog = sensor_analog + analogRead(soilMoistureSensorPin);
-        delay(500);
+        delay(100);
         Serial.print(".");
       }
       Serial.println();
