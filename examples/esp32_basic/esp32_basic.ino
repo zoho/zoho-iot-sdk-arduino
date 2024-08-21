@@ -9,7 +9,7 @@
 
 WiFiClient espClient;
 ZohoIOTClient zClient(&espClient, false);
-const long interval = 1000;
+const long interval = 10000;
 
 ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESFULLY_EXECUTED;
 unsigned long prev_time = 0, current_time = 0;
