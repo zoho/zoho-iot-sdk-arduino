@@ -211,10 +211,6 @@ int8_t ZohoIOTClient::dispatch()
     int size = jsonString.length() + 1;
     char payloadMsg[size];
     jsonString.toCharArray(payloadMsg,size);
-    //TODO: remove below debug message(payload message).
-    //Serial.print("Payload message : ");
-    //Serial.println(payloadMsg);
-
     return publish(payloadMsg);
 }
 void ZohoIOTClient::addConnectionParameter(char *connectionParamKey, char *connectionParamValue)
@@ -434,4 +430,11 @@ int8_t ZohoIOTClient::disconnect()
         }
     }
     return SUCCESS;
+}
+
+string ZohoIOTClient::getPayload()
+{
+    String jsonString;
+    serializeJson(root, jsonString);
+    return std::string(jsonString.c_str());
 }

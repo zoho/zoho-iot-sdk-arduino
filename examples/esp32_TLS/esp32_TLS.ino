@@ -10,7 +10,7 @@
 
 WiFiClientSecure espClient;
 ZohoIOTClient zClient(&espClient, true);
-const long interval = 2000;
+const long interval = 10000;
 ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESFULLY_EXECUTED;
 unsigned long prev_time = 0, current_time = 0;
 
@@ -141,13 +141,11 @@ void loop()
             prev_time = current_time;
             zClient.addDataPointNumber("voltage", rand() / 100);
             zClient.addDataPointNumber("current", rand() / 300);
-            Serial.print("dispatch:");
-            Serial.println(zClient.dispatch());
-        }
-        else
-        {
-            Serial.println("Persist polled datapoints");
-            // Write your Own persistance logic to store and publish data.
+            String payload = zClient.getPayload().c_str();
+            Serial.println("dispatching message: " + payload);
+            if (zClient.dispatch() == zClient.SUCCESS) {
+                Serial.println("Message published successfully");
+            }
         }
     }
     zClient.zyield();
