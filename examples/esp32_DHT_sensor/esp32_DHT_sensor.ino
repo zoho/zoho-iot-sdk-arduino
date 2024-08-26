@@ -19,7 +19,7 @@ DHT dht(DHTPIN, DHTTYPE);
 
 
 WiFiClientSecure espClient;
-ZohoIOTClient zClient(&espClient, false);
+ZohoIOTClient zClient(&espClient, true);
 const long interval = 10000;
 
 ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESFULLY_EXECUTED;
