@@ -1,5 +1,8 @@
 #include <WiFi.h>
+#include <Arduino.h>
+#include <WiFiClientSecure.h>
 #include <zoho-iot-client.h>
+#include "certificate.h"
 
 #define SSID "Wifi_ssid"
 #define PASSWORD "Wifi_password"
@@ -9,7 +12,7 @@
 
 const int soilMoistureSensorPin = 34;
 const int RelayPin = 26;
-WiFiClient espClient;
+WiFiClientSecure espClient;
 ZohoIOTClient zClient(&espClient, false);
 const long interval = 10000;
 int numberOfSamples = 10;
@@ -67,28 +70,26 @@ void on_message(char *topic, uint8_t *payload, unsigned int length) {
       JsonObject commandMessageObj = doc[itr];
       const char *correlation_id = commandMessageObj["correlation_id"];
       const char *command_name = commandMessageObj["command_name"];
-      if(strcmp(command_name,"pump_controll") == 0){
+      if (strcmp(command_name, "pump_controll") == 0) {
         JsonArray payloadArray = commandMessageObj["payload"].as<JsonArray>();
         const char *value = payloadArray[0]["value"];
         if (strcmp(value, "on") == 0) {
-            // Turn on the relay
-            Serial.println("Turning on the relay");
-            digitalWrite(RelayPin, LOW); 
-            zClient.publishCommandAck(correlation_id, success_response_code, "Pump Turned ON");
+          // Turn on the relay
+          Serial.println("Turning on the relay");
+          digitalWrite(RelayPin, LOW);
+          zClient.publishCommandAck(correlation_id, success_response_code, "Pump Turned ON");
         } else if (strcmp(value, "off") == 0) {
-            // Turn off the relay
-            Serial.println("Turning off the relay");
-            digitalWrite(RelayPin, HIGH); 
-            zClient.publishCommandAck(correlation_id, success_response_code, "Pump Turned OFF");
+          // Turn off the relay
+          Serial.println("Turning off the relay");
+          digitalWrite(RelayPin, HIGH);
+          zClient.publishCommandAck(correlation_id, success_response_code, "Pump Turned OFF");
         } else {
-            Serial.println("Unknown value for edge_command_key");
-            zClient.publishCommandAck(correlation_id, failure_response_code, "Unknown value for edge_command_key");
+          Serial.println("Unknown value for edge_command_key");
+          zClient.publishCommandAck(correlation_id, failure_response_code, "Unknown value for edge_command_key");
         }
+      } else {
+        zClient.publishCommandAck(correlation_id, failure_response_code, "Unknown command");
       }
-      else{
-         zClient.publishCommandAck(correlation_id, failure_response_code, "Unknown command");
-      }
-      
     }
   }
 }
@@ -96,9 +97,10 @@ void on_message(char *topic, uint8_t *payload, unsigned int length) {
 void setup() {
   Serial.begin(115200);
   Serial.println("Booting Up!");
-  pinMode(RelayPin,OUTPUT);
-  digitalWrite(RelayPin,HIGH);
+  pinMode(RelayPin, OUTPUT);
+  digitalWrite(RelayPin, HIGH);
   setup_wifi();
+  espClient.setCACert(root_ca);
   zClient.init(MQTT_USERNAME, MQTT_PASSWORD);
   zClient.connect();
   zClient.subscribe(on_message);
@@ -106,6 +108,8 @@ void setup() {
 }
 
 void loop() {
+  //Watchdog for Wifi & MQTT connection status.
+  //Automatically reconnect in case of connection failure.
   setup_wifi();
   zClient.reconnect();
   if ((current_time = millis()) - prev_time >= interval) {
@@ -113,20 +117,23 @@ void loop() {
       prev_time = current_time;
       int sensor_analog = 0;
       Serial.println("Reading from soil moisture sensor");
-      for(int i = 0; i < numberOfSamples ; i++){
+      for (int i = 0; i < numberOfSamples; i++) {
         sensor_analog = sensor_analog + analogRead(soilMoistureSensorPin);
         delay(100);
         Serial.print(".");
       }
       Serial.println();
-      sensor_analog = sensor_analog/numberOfSamples;
+      sensor_analog = sensor_analog / numberOfSamples;
       //convert raw sensor value to percentage
-      int moisture = ( 100 - ( (sensor_analog/4095.00) * 100 ) );
+      int moisture = (100 - ((sensor_analog / 4095.00) * 100));
       zClient.addDataPointNumber("moisture", moisture);
       String payload = zClient.getPayload().c_str();
       Serial.println("dispatching message: " + payload);
-      if (zClient.dispatch() == zClient.SUCCESS) {
+      int rc = zClient.dispatch();
+      if (rc == zClient.SUCCESS) {
         Serial.println("Message published successfully");
+      } else {
+        Serial.println("Failed to published message");
       }
     }
   }
