@@ -13,7 +13,7 @@
 const int soilMoistureSensorPin = 34;
 const int RelayPin = 26;
 WiFiClientSecure espClient;
-ZohoIOTClient zClient(&espClient, false);
+ZohoIOTClient zClient(&espClient, true);
 const long interval = 10000;
 int numberOfSamples = 10;
 ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESFULLY_EXECUTED;
