@@ -40,9 +40,9 @@ If these libraries are not installed, download them using the "Download ZIP" opt
 
 Follow the below steps to import this SDK as Library in Arduino:
 
-- Download this SDK by choosing `Code` -> `Download ZIP` option.
+- Download the latest version of SDK using this link https://github.com/zoho/zoho-iot-sdk-arduino/archive/refs/tags/0.1.0.zip
 - In Arduino IDE, choose `Sketch` -> `Include Library` -> `Add .ZIP Library..`
-- From the downloaded location, choose the `zoho-iot-sdk-arduino.zip`.
+- From the downloaded location, choose the `zoho-iot-sdk-arduino-0.1.0.zip`.
 
 ### Tying out the Examples
 The SDK comes with default example sketches. You can find them under `File` -> `Examples` -> `ZOHO-IOT-SDK` within the Arduino IDE.
