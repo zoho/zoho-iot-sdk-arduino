@@ -125,8 +125,8 @@ void loop() {
       Serial.println();
       sensor_analog = sensor_analog / numberOfSamples;
       //convert raw sensor value to percentage
-      int moisture = (100 - ((sensor_analog / 4095.00) * 100));
-      zClient.addDataPointNumber("moisture", moisture);
+      int soil_moisture = (100 - ((sensor_analog / 4095.00) * 100));
+      zClient.addDataPointNumber("soil_moisture", soil_moisture);
       String payload = zClient.getPayload().c_str();
       Serial.println("dispatching message: " + payload);
       int rc = zClient.dispatch();
