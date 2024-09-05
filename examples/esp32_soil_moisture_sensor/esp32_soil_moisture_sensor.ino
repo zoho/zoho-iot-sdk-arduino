@@ -69,10 +69,10 @@ void on_message(char *topic, uint8_t *payload, unsigned int length) {
     for (int itr = 0; itr < msglength; itr++) {
       JsonObject commandMessageObj = doc[itr];
       const char *correlation_id = commandMessageObj["correlation_id"];
-      const char *command_name = commandMessageObj["command_name"];
-      if (strcmp(command_name, "pump_controll") == 0) {
-        JsonArray payloadArray = commandMessageObj["payload"].as<JsonArray>();
-        const char *value = payloadArray[0]["value"];
+      JsonArray payloadArray = commandMessageObj["payload"].as<JsonArray>();
+      const char *command_key = payloadArray[0]["edge_command_key"];
+      const char *value = payloadArray[0]["value"];
+      if (strcmp(command_key, "pump_status") == 0) {
         if (strcmp(value, "on") == 0) {
           // Turn on the relay
           Serial.println("Turning on the relay");
@@ -88,6 +88,7 @@ void on_message(char *topic, uint8_t *payload, unsigned int length) {
           zClient.publishCommandAck(correlation_id, failure_response_code, "Unknown value for edge_command_key");
         }
       } else {
+        Serial.println("Unknown command, command not handled");
         zClient.publishCommandAck(correlation_id, failure_response_code, "Unknown command");
       }
     }
