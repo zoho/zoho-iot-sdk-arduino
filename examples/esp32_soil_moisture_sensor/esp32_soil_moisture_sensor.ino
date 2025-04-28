@@ -16,7 +16,7 @@ WiFiClientSecure espClient;
 ZohoIOTClient zClient(&espClient, true);
 const long interval = 10000;
 int numberOfSamples = 10;
-ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESFULLY_EXECUTED;
+ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESSFULLY_EXECUTED;
 ZohoIOTClient::commandAckResponseCodes failure_response_code = ZohoIOTClient::EXECUTION_FAILURE;
 unsigned long prev_time = 0, current_time = 0;
 
@@ -47,7 +47,7 @@ void setup_wifi() {
 }
 
 void on_message(char *topic, uint8_t *payload, unsigned int length) {
-  Serial.println("new message recieved");
+  Serial.println("new message received");
   String msg = "";
   for (unsigned int itr = 0; itr < length; itr++) {
     msg += (char)payload[itr];
