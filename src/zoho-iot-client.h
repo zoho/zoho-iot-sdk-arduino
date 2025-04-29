@@ -54,7 +54,7 @@ private:
     DISCONNECTED
   } clientState;
 
-  unsigned long current_retry_interaval = (unsigned long)MIN_RETRY_INTERVAL;
+  unsigned long current_retry_interval = (unsigned long)MIN_RETRY_INTERVAL;
   PubSubClient *_mqtt_client;
   const char *_mqtt_user_name;
   const char *_mqtt_password;
