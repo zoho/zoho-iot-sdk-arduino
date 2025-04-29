@@ -73,6 +73,8 @@ void setup() {
   Serial.println("Booting Up!");
   setup_wifi();
   zClient.init(MQTT_USERNAME, MQTT_PASSWORD);
+  // Adjust the size based on the number of data points required
+  zClient.setMaxPayloadSize(512);
   zClient.connect();
   zClient.subscribe(on_message);
   Serial.println("Ready!");

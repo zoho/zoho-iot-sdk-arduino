@@ -147,6 +147,8 @@ void setup() {
   espClient.setPrivateKey(private_key);
   espClient.setCACert(root_ca);
   zClient.init(MQTT_USERNAME, MQTT_PASSWORD);
+  // Adjust the size based on the number of data points required
+  zClient.setMaxPayloadSize(512);
   zClient.connect();
   zClient.subscribe(on_message);
   Serial.println("Ready!");
