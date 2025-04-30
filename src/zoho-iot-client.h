@@ -16,10 +16,10 @@
 #define commandAck "/commands/ack"
 
 #define sdk_name (char *)"zoho-iot-sdk-arduino"
-#define sdk_version (char *)"0.0.1"
+#define sdk_version (char *)"0.1.2"
 #define sdk_url (char *)""
 
-#define COMMAND_RECIEVED_ACK_CODE 1000
+#define COMMAND_RECEIVED_ACK_CODE 1000
 #define MAX_RETRY_INTERVAL 1800
 #define MIN_RETRY_INTERVAL 2
 #define MAX_PAYLOAD_SIZE (int)100000
@@ -54,7 +54,7 @@ private:
     DISCONNECTED
   } clientState;
 
-  unsigned long current_retry_interaval = (unsigned long)MIN_RETRY_INTERVAL;
+  unsigned long current_retry_interval = (unsigned long)MIN_RETRY_INTERVAL;
   PubSubClient *_mqtt_client;
   const char *_mqtt_user_name;
   const char *_mqtt_password;
@@ -130,7 +130,7 @@ public:
 
   typedef enum
   {
-    SUCCESFULLY_EXECUTED = 1001,
+    SUCCESSFULLY_EXECUTED = 1001,
     EXECUTION_FAILURE = 4000,
     METHOD_NOT_FOUND = 4001,
     EXECUTING_PREVIOUS_COMMAND = 4002,

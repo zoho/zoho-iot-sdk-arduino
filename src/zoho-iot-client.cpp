@@ -120,15 +120,15 @@ int8_t ZohoIOTClient::dispatchEventFromJSONString(const char *eventType, const c
     }
     else
     {
-        JsonObject eventDisptachObject = event_dispatch_doc.to<JsonObject>();
-        eventDisptachObject[assetName] = eventObject;
+        JsonObject eventDispatchObject = event_dispatch_doc.to<JsonObject>();
+        eventDispatchObject[assetName] = eventObject;
         String jsonString;
-        serializeJson(eventDisptachObject, jsonString);
+        serializeJson(eventDispatchObject, jsonString);
         int size = jsonString.length()+1;
         char payloadMsg[size];
         jsonString.toCharArray(payloadMsg,size);
         pub_status = _mqtt_client->publish(_event_topic, payloadMsg);
-        eventDisptachObject.remove(assetName);
+        eventDispatchObject.remove(assetName);
         event_dispatch_doc.clear();
     }
     if (pub_status == true)
@@ -281,7 +281,7 @@ int8_t ZohoIOTClient::reconnect()
         start_time = millis();
     }
 
-    if (millis() - start_time > current_retry_interaval * 1000)
+    if (millis() - start_time > current_retry_interval * 1000)
     {
         // Serial.println("trying to reconnect");
         int rc = connect();
@@ -290,18 +290,18 @@ int8_t ZohoIOTClient::reconnect()
             // Serial.println("connected");
             currentState = CONNECTED;
             retryCount = 0;
-            current_retry_interaval = (unsigned long)MIN_RETRY_INTERVAL;
+            current_retry_interval = (unsigned long)MIN_RETRY_INTERVAL;
             start_time = 0;
             _mqtt_client->subscribe(_command_topic);
             return SUCCESS;
         }
         start_time = millis();
-        current_retry_interaval = getRetryInterval(&current_retry_interaval);
+        current_retry_interval = getRetryInterval(&current_retry_interval);
         retryCount = retryCount + 1;
         // Serial.println("current time");
         // Serial.println(millis());
         // Serial.print("Retrying in ");
-        // Serial.print((int)current_retry_interaval);
+        // Serial.print((int)current_retry_interval);
         // Serial.println(" seconds");
         if (currentState != DISCONNECTED && currentState != CONNECTED)
         {
@@ -344,13 +344,13 @@ void ZohoIOTClient::onMessageReceived(char *topic, uint8_t *payload, unsigned in
     JsonDocument on_message_handler_buffer;
     JsonDocument ack_message_buffer;
     char payload_msg[length + 1];
-    uint8_t frwd_payload[length];
+    uint8_t forward_payload[length];
     uint8_t len = strlen(topic);
-    char frwd_topic[len];
-    strcpy(frwd_topic, topic);
+    char forward_topic[len];
+    strcpy(forward_topic, topic);
     for (unsigned int itr = 0; itr < length; itr++)
     {
-        frwd_payload[itr] = payload[itr];
+        forward_payload[itr] = payload[itr];
         payload_msg[itr] = (char)payload[itr];
     }
     if (strcmp(topic, _command_topic) == 0)
@@ -369,7 +369,7 @@ void ZohoIOTClient::onMessageReceived(char *topic, uint8_t *payload, unsigned in
             JsonDocument object;
             JsonObject commandMessageObj = commandMessageArray[itr];
             const char *correlation_id = commandMessageObj["correlation_id"];
-            object["status_code"] = COMMAND_RECIEVED_ACK_CODE;
+            object["status_code"] = COMMAND_RECEIVED_ACK_CODE;
             object["response"] = "";
             commandAckMessage[correlation_id] = object;
         }
@@ -382,7 +382,7 @@ void ZohoIOTClient::onMessageReceived(char *topic, uint8_t *payload, unsigned in
         on_message_handler_buffer.clear();
         ack_message_buffer.clear();
     }
-    this->callback(frwd_topic, frwd_payload, length);
+    this->callback(forward_topic, forward_payload, length);
 }
 
 int8_t ZohoIOTClient::subscribe(MQTT_CALLBACK_SIGNATURE)

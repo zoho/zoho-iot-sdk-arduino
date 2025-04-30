@@ -11,7 +11,7 @@ WiFiClient espClient;
 ZohoIOTClient zClient(&espClient, false);
 const long interval = 10000;
 
-ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESFULLY_EXECUTED;
+ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESSFULLY_EXECUTED;
 unsigned long prev_time = 0, current_time = 0;
 
 void setup_wifi() {
@@ -41,7 +41,7 @@ void setup_wifi() {
 }
 
 void on_message(char *topic, uint8_t *payload, unsigned int length) {
-  Serial.println("new message recieved");
+  Serial.println("new message received");
   String msg = "";
   for (unsigned int itr = 0; itr < length; itr++) {
     msg += (char)payload[itr];
@@ -73,6 +73,8 @@ void setup() {
   Serial.println("Booting Up!");
   setup_wifi();
   zClient.init(MQTT_USERNAME, MQTT_PASSWORD);
+  // Adjust the size based on the number of data points required
+  zClient.setMaxPayloadSize(512);
   zClient.connect();
   zClient.subscribe(on_message);
   Serial.println("Ready!");
@@ -86,8 +88,29 @@ void loop() {
   if ((current_time = millis()) - prev_time >= interval) {
     if (zClient.isConnected()) {
       prev_time = current_time;
-      zClient.addDataPointNumber("voltage", rand() / 100);
-      zClient.addDataPointNumber("current", rand() / 300);
+      // Simulate voltage between 210V and 240V
+      float voltage1 = 210 + random(0, 3000) / 100.0;
+      zClient.addDataPointNumber("l1_to_neutral_voltage", voltage1);
+      float voltage2 = 210 + random(0, 3000) / 100.0;
+      zClient.addDataPointNumber("l2_to_neutral_voltage", voltage2);
+      float voltage3 = 210 + random(0, 3000) / 100.0;
+      zClient.addDataPointNumber("l3_to_neutral_voltage", voltage3);
+      float voltage = (voltage1+voltage2+voltage3) / 3.0;
+      zClient.addDataPointNumber("line_to_neutral_voltage", voltage);
+
+      // Simulate current between 0A and 10A
+      float current1 = random(0, 1000) / 100.0;
+      zClient.addDataPointNumber("l1_current", current1);
+      float current2 = random(0, 1000) / 100.0;
+      zClient.addDataPointNumber("l2_current", current2);
+      float current3 = random(0, 1000) / 100.0;
+      zClient.addDataPointNumber("l3_current", current3);
+      float current = (current1+current2+current3) / 3.0;
+      zClient.addDataPointNumber("average_current", current);
+
+      // Simulate frequency between 49.5 Hz and 50.5 Hz (for 50 Hz mains)
+      float frequency = 49.5 + random(0, 101) / 100.0;
+      zClient.addDataPointNumber("frequency", frequency);
       String payload = zClient.getPayload().c_str();
       Serial.println("dispatching message: " + payload);
       int rc = zClient.dispatch();

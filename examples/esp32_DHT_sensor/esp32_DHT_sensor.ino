@@ -12,17 +12,17 @@
 
 #include "DHT.h"
 
-#define DHTPIN 13
+#define DHT_PIN 13
 
-#define DHTTYPE DHT11
-DHT dht(DHTPIN, DHTTYPE);
+#define DHT_TYPE DHT11
+DHT dht(DHT_PIN, DHT_TYPE);
 
 
 WiFiClientSecure espClient;
 ZohoIOTClient zClient(&espClient, true);
 const long interval = 10000;
 
-ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESFULLY_EXECUTED;
+ZohoIOTClient::commandAckResponseCodes success_response_code = ZohoIOTClient::SUCCESSFULLY_EXECUTED;
 unsigned long prev_time = 0, current_time = 0;
 
 void setup_wifi() {
