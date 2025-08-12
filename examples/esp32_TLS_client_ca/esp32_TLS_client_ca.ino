@@ -88,7 +88,7 @@ const char *private_key = "-----BEGIN CERTIFICATE-----\n"
                           "-----END CERTIFICATE-----";
 
 void on_message(char *topic, uint8_t *payload, unsigned int length) {
-  Serial.println("new message recieved");
+  Serial.println("new message received");
   String msg = "";
   for (unsigned int itr = 0; itr < length; itr++) {
     msg += (char)payload[itr];
