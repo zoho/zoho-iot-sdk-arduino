@@ -16,7 +16,7 @@
 #define commandAck "/commands/ack"
 
 #define sdk_name (char *)"zoho-iot-sdk-arduino"
-#define sdk_version (char *)"0.1.2"
+#define sdk_version (char *)"0.1.3"
 #define sdk_url (char *)""
 
 #define COMMAND_RECEIVED_ACK_CODE 1000
